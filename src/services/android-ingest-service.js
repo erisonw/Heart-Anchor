@@ -87,7 +87,7 @@ class AndroidIngestService {
       if (!result.duplicate && this.onAccepted) {
         Promise.resolve(this.onAccepted(result)).catch((error) => {
           const message = error instanceof Error ? error.stack || error.message : String(error);
-          console.error(`[cyberboss] android ingest callback failed ${message}`);
+          console.error(`[heart-anchor] android ingest callback failed ${message}`);
         });
       }
       return;

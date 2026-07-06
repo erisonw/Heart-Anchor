@@ -8,7 +8,7 @@ const { normalizeText } = require("../core/values");
 const { buildSettingsView, readEnvFile, resolvePreferredEnvFile } = require("./env-store");
 const { getLogBuffer } = require("./log-buffer");
 
-const PROJECT_ROOT = process.env.CYBERBOSS_HOME || path.resolve(__dirname, "..", "..");
+const PROJECT_ROOT = process.env.HEART_ANCHOR_HOME || process.env.CYBERBOSS_HOME || path.resolve(__dirname, "..", "..");
 const MCP_CONFIG_FILE = path.join(PROJECT_ROOT, ".mcp.json");
 const PACKAGE_VERSION = require("../../package.json").version;
 

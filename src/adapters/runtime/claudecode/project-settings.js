@@ -33,7 +33,7 @@ function ensureClaudeProjectMcpConfig({ workspaceRoot, cyberbossHome = "" } = {}
 
 function buildClaudeProjectMcpServerConfig({ workspaceRoot, cyberbossHome = "" } = {}) {
   const normalizedWorkspaceRoot = normalizeText(workspaceRoot);
-  const home = normalizeText(cyberbossHome) || process.env.CYBERBOSS_HOME || path.resolve(__dirname, "..", "..", "..", "..");
+  const home = normalizeText(cyberbossHome) || process.env.HEART_ANCHOR_HOME || process.env.CYBERBOSS_HOME || path.resolve(__dirname, "..", "..", "..", "..");
   const scriptPath = path.join(home, "bin", "cyberboss.js");
   if (!fs.existsSync(scriptPath)) {
     throw new Error(`Cyberboss MCP entrypoint not found: ${scriptPath}`);

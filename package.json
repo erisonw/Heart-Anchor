@@ -1,5 +1,5 @@
 {
-  "name": "cyberboss",
+  "name": "heart-anchor",
   "version": "0.1.0",
   "description": "A personal agent bridge core for life operations.",
   "license": "AGPL-3.0-only",
@@ -7,6 +7,7 @@
   "type": "commonjs",
   "main": "src/index.js",
   "bin": {
+    "heart-anchor": "./bin/cyberboss.js",
     "cyberboss": "./bin/cyberboss.js"
   },
   "engines": {

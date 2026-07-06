@@ -1,11 +1,11 @@
-# Cyberboss
+# Heart-Anchor
 
 [![Node >=22](https://img.shields.io/badge/Node-22%2B-3C873A)](./package.json)
 [![License: AGPLv3](https://img.shields.io/badge/License-AGPLv3-b31b1b)](./LICENSE)
 
-Cyberboss 是一个个人 Agent 桥接系统：把 Claude Code / Codex / Antigravity CLI 这类本地运行时接到聊天入口、系统事件、时间线、提醒、记忆、音乐、语音和 Web 控制台上，让模型不只是”回答问题”，而是能围绕一个真实用户的日常上下文持续工作。
+Heart-Anchor 是一个个人 Agent 桥接系统：把 Claude Code / Codex / Antigravity CLI 这类本地运行时接到聊天入口、系统事件、时间线、提醒、记忆、音乐、语音和 Web 控制台上，让模型不只是”回答问题”，而是能围绕一个真实用户的日常上下文持续工作。
 
-本仓库是基于 [WenXiaoWendy/cyberboss](https://github.com/WenXiaoWendy/cyberboss) 的个人二次开发版本。当前目标不是做通用聊天机器人，而是做一个可长期常驻、可主动触发、可接入手机事件和个人工具链的 life operations agent。
+本仓库是基于 [WenXiaoWendy/cyberboss](https://github.com/WenXiaoWendy/cyberboss) 的二次开发版本，曾用名 / 内部代号 `cyberboss`（部分内部标识如 MCP 工具名仍沿用）。历史环境变量前缀 `CYBERBOSS_*` 与旧状态目录 `~/.cyberboss` 完全向后兼容，老部署无需迁移。当前目标不是做通用聊天机器人，而是做一个可长期常驻、可主动触发、可接入手机事件和个人工具链的 life operations agent。
 
 ## 当前能力
 
@@ -26,7 +26,7 @@ Cyberboss 是一个个人 Agent 桥接系统：把 Claude Code / Codex / Antigra
 
 ## 技术栈
 
-一句话版：Cyberboss 是一个 Node.js CommonJS 编写的多 channel / 多 runtime Agent bridge，通过 MCP tool host、长轮询消息桥、system queue、timeline-for-agent 与本地状态存储，把 Claude Code/Codex 接进 Telegram、WeChat、Android webhook 和个人自动化工具链。
+一句话版：Heart-Anchor 是一个 Node.js CommonJS 编写的多 channel / 多 runtime Agent bridge，通过 MCP tool host、长轮询消息桥、system queue、timeline-for-agent 与本地状态存储，把 Claude Code/Codex 接进 Telegram、WeChat、Android webhook 和个人自动化工具链。
 
 主要模块：
 
@@ -53,8 +53,8 @@ Cyberboss 是一个个人 Agent 桥接系统：把 Claude Code / Codex / Antigra
 - 如果使用 Telegram：准备一个 Telegram Bot token。
 
 ```bash
-git clone <repo-url> cyberboss
-cd cyberboss
+git clone <repo-url> heart-anchor
+cd heart-anchor
 npm install
 cp .env.example .env   # 按注释填写，最小配置只需「快速开始」一节
 npm run check
@@ -65,14 +65,14 @@ npm run check
 ### Telegram + Claude Code
 
 ```dotenv
-CYBERBOSS_CHANNEL=telegram
-CYBERBOSS_TELEGRAM_BOT_TOKEN=<your_telegram_bot_token>
-CYBERBOSS_TELEGRAM_ALLOWED_CHAT_IDS=<your_chat_id>
-CYBERBOSS_TELEGRAM_TRANSPORT=curl
+HEART_ANCHOR_CHANNEL=telegram
+HEART_ANCHOR_TELEGRAM_BOT_TOKEN=<your_telegram_bot_token>
+HEART_ANCHOR_TELEGRAM_ALLOWED_CHAT_IDS=<your_chat_id>
+HEART_ANCHOR_TELEGRAM_TRANSPORT=curl
 
-CYBERBOSS_RUNTIME=claudecode
-CYBERBOSS_CLAUDE_COMMAND=claude
-CYBERBOSS_WORKSPACE_ROOT=/absolute/path/to/cyberboss
+HEART_ANCHOR_RUNTIME=claudecode
+HEART_ANCHOR_CLAUDE_COMMAND=claude
+HEART_ANCHOR_WORKSPACE_ROOT=/absolute/path/to/heart-anchor
 ```
 
 启动：
@@ -90,11 +90,11 @@ npm run start
 ### WeChat + Claude Code
 
 ```dotenv
-CYBERBOSS_CHANNEL=weixin
-CYBERBOSS_RUNTIME=claudecode
-CYBERBOSS_CLAUDE_COMMAND=claude
-CYBERBOSS_ALLOWED_USER_IDS=<your_wechat_user_id>
-CYBERBOSS_WORKSPACE_ROOT=/absolute/path/to/cyberboss
+HEART_ANCHOR_CHANNEL=weixin
+HEART_ANCHOR_RUNTIME=claudecode
+HEART_ANCHOR_CLAUDE_COMMAND=claude
+HEART_ANCHOR_ALLOWED_USER_IDS=<your_wechat_user_id>
+HEART_ANCHOR_WORKSPACE_ROOT=/absolute/path/to/heart-anchor
 ```
 
 登录：
@@ -146,148 +146,148 @@ npm test               # 全量测试
 基础：
 
 ```dotenv
-CYBERBOSS_STATE_DIR=~/.cyberboss
-CYBERBOSS_WORKSPACE_ID=default
-CYBERBOSS_WORKSPACE_ROOT=/absolute/path/to/project
-CYBERBOSS_USER_NAME=User
-CYBERBOSS_USER_GENDER=neutral
-CYBERBOSS_CHANNEL=telegram
-CYBERBOSS_RUNTIME=claudecode
+HEART_ANCHOR_STATE_DIR=~/.heart-anchor
+HEART_ANCHOR_WORKSPACE_ID=default
+HEART_ANCHOR_WORKSPACE_ROOT=/absolute/path/to/project
+HEART_ANCHOR_USER_NAME=User
+HEART_ANCHOR_USER_GENDER=neutral
+HEART_ANCHOR_CHANNEL=telegram
+HEART_ANCHOR_RUNTIME=claudecode
 ```
 
 Telegram：
 
 ```dotenv
-CYBERBOSS_TELEGRAM_BOT_TOKEN=
-CYBERBOSS_TELEGRAM_ALLOWED_CHAT_IDS=
-CYBERBOSS_TELEGRAM_API_BASE_URL=https://api.telegram.org
-CYBERBOSS_TELEGRAM_POLL_TIMEOUT_MS=900
-CYBERBOSS_TELEGRAM_TRANSPORT=curl
+HEART_ANCHOR_TELEGRAM_BOT_TOKEN=
+HEART_ANCHOR_TELEGRAM_ALLOWED_CHAT_IDS=
+HEART_ANCHOR_TELEGRAM_API_BASE_URL=https://api.telegram.org
+HEART_ANCHOR_TELEGRAM_POLL_TIMEOUT_MS=900
+HEART_ANCHOR_TELEGRAM_TRANSPORT=curl
 ```
 
 WeChat：
 
 ```dotenv
-CYBERBOSS_ALLOWED_USER_IDS=
-CYBERBOSS_ACCOUNT_ID=
-CYBERBOSS_WEIXIN_BASE_URL=https://ilinkai.weixin.qq.com
-CYBERBOSS_WEIXIN_CDN_BASE_URL=https://novac2c.cdn.weixin.qq.com/c2c
-CYBERBOSS_WEIXIN_QR_BOT_TYPE=3
-CYBERBOSS_WEIXIN_MIN_CHUNK_CHARS=20
+HEART_ANCHOR_ALLOWED_USER_IDS=
+HEART_ANCHOR_ACCOUNT_ID=
+HEART_ANCHOR_WEIXIN_BASE_URL=https://ilinkai.weixin.qq.com
+HEART_ANCHOR_WEIXIN_CDN_BASE_URL=https://novac2c.cdn.weixin.qq.com/c2c
+HEART_ANCHOR_WEIXIN_QR_BOT_TYPE=3
+HEART_ANCHOR_WEIXIN_MIN_CHUNK_CHARS=20
 ```
 
 Claude Code：
 
 ```dotenv
-CYBERBOSS_CLAUDE_COMMAND=claude
-CYBERBOSS_CLAUDE_MODEL=
-CYBERBOSS_CLAUDE_MODEL_PRESETS=
-CYBERBOSS_CLAUDE_CONTEXT_WINDOW=
+HEART_ANCHOR_CLAUDE_COMMAND=claude
+HEART_ANCHOR_CLAUDE_MODEL=
+HEART_ANCHOR_CLAUDE_MODEL_PRESETS=
+HEART_ANCHOR_CLAUDE_CONTEXT_WINDOW=
 CLAUDE_CODE_MAX_OUTPUT_TOKENS=
-CYBERBOSS_CLAUDE_PERMISSION_MODE=default
-CYBERBOSS_CLAUDE_DISABLE_VERBOSE=false
-CYBERBOSS_CLAUDE_EXTRA_ARGS=
+HEART_ANCHOR_CLAUDE_PERMISSION_MODE=default
+HEART_ANCHOR_CLAUDE_DISABLE_VERBOSE=false
+HEART_ANCHOR_CLAUDE_EXTRA_ARGS=
 ```
 
 Codex：
 
 ```dotenv
-CYBERBOSS_CODEX_ENDPOINT=
-CYBERBOSS_CODEX_COMMAND=
-CYBERBOSS_CODEX_MODEL=
-CYBERBOSS_CODEX_MODEL_PROVIDER=
-CYBERBOSS_CODEX_MODEL_PRESETS=
-CYBERBOSS_CODEX_NATIVE_IMAGE_INPUT=
+HEART_ANCHOR_CODEX_ENDPOINT=
+HEART_ANCHOR_CODEX_COMMAND=
+HEART_ANCHOR_CODEX_MODEL=
+HEART_ANCHOR_CODEX_MODEL_PROVIDER=
+HEART_ANCHOR_CODEX_MODEL_PRESETS=
+HEART_ANCHOR_CODEX_NATIVE_IMAGE_INPUT=
 ```
 
 Antigravity：
 
 ```dotenv
-CYBERBOSS_ANTIGRAVITY_COMMAND=agy
-CYBERBOSS_ANTIGRAVITY_MODEL=
-CYBERBOSS_ANTIGRAVITY_PRINT_TIMEOUT=5m0s
-CYBERBOSS_ANTIGRAVITY_CONTINUE=true
-CYBERBOSS_ANTIGRAVITY_EXTRA_ARGS=
+HEART_ANCHOR_ANTIGRAVITY_COMMAND=agy
+HEART_ANCHOR_ANTIGRAVITY_MODEL=
+HEART_ANCHOR_ANTIGRAVITY_PRINT_TIMEOUT=5m0s
+HEART_ANCHOR_ANTIGRAVITY_CONTINUE=true
+HEART_ANCHOR_ANTIGRAVITY_EXTRA_ARGS=
 ```
 
 主动消息与 Android：
 
 ```dotenv
-CYBERBOSS_ENABLE_CHECKIN=false
-CYBERBOSS_CHECKIN_MIN_INTERVAL_MS=
-CYBERBOSS_CHECKIN_MAX_INTERVAL_MS=
+HEART_ANCHOR_ENABLE_CHECKIN=false
+HEART_ANCHOR_CHECKIN_MIN_INTERVAL_MS=
+HEART_ANCHOR_CHECKIN_MAX_INTERVAL_MS=
 
-CYBERBOSS_ENABLE_ANDROID_WEBHOOK=false
-CYBERBOSS_ANDROID_WEBHOOK_HOST=0.0.0.0
-CYBERBOSS_ANDROID_WEBHOOK_PORT=4319
-CYBERBOSS_ANDROID_WEBHOOK_TOKEN=
-CYBERBOSS_ANDROID_COMMANDS_ENABLED=true
-CYBERBOSS_ANDROID_DEFAULT_DEVICE_ID=phone-main
-CYBERBOSS_FIREBASE_SERVICE_ACCOUNT_FILE=
-CYBERBOSS_FIREBASE_MESSAGING_TIMEOUT_MS=10000
+HEART_ANCHOR_ENABLE_ANDROID_WEBHOOK=false
+HEART_ANCHOR_ANDROID_WEBHOOK_HOST=0.0.0.0
+HEART_ANCHOR_ANDROID_WEBHOOK_PORT=4319
+HEART_ANCHOR_ANDROID_WEBHOOK_TOKEN=
+HEART_ANCHOR_ANDROID_COMMANDS_ENABLED=true
+HEART_ANCHOR_ANDROID_DEFAULT_DEVICE_ID=phone-main
+HEART_ANCHOR_FIREBASE_SERVICE_ACCOUNT_FILE=
+HEART_ANCHOR_FIREBASE_MESSAGING_TIMEOUT_MS=10000
 ```
 
 Web 控制台：
 
 ```dotenv
-CYBERBOSS_WEB_CONSOLE=true
-CYBERBOSS_WEB_CONSOLE_HOST=127.0.0.1
-CYBERBOSS_WEB_CONSOLE_PORT=3210
-CYBERBOSS_WEB_CONSOLE_TOKEN=
+HEART_ANCHOR_WEB_CONSOLE=true
+HEART_ANCHOR_WEB_CONSOLE_HOST=127.0.0.1
+HEART_ANCHOR_WEB_CONSOLE_PORT=3210
+HEART_ANCHOR_WEB_CONSOLE_TOKEN=
 ```
 
 Google 日历 / Gmail（OAuth client 复用同一组即可）：
 
 ```dotenv
-CYBERBOSS_GOOGLE_CALENDAR_CLIENT_ID=
-CYBERBOSS_GOOGLE_CALENDAR_CLIENT_SECRET=
-CYBERBOSS_GOOGLE_CALENDAR_REDIRECT_URI=
-CYBERBOSS_GOOGLE_GMAIL_CLIENT_ID=
-CYBERBOSS_GOOGLE_GMAIL_CLIENT_SECRET=
+HEART_ANCHOR_GOOGLE_CALENDAR_CLIENT_ID=
+HEART_ANCHOR_GOOGLE_CALENDAR_CLIENT_SECRET=
+HEART_ANCHOR_GOOGLE_CALENDAR_REDIRECT_URI=
+HEART_ANCHOR_GOOGLE_GMAIL_CLIENT_ID=
+HEART_ANCHOR_GOOGLE_GMAIL_CLIENT_SECRET=
 ```
 
 位置与 whereabouts：
 
 ```dotenv
-CYBERBOSS_ENABLE_LOCATION_SERVER=false
-CYBERBOSS_LOCATION_HOST=0.0.0.0
-CYBERBOSS_LOCATION_PORT=4318
-CYBERBOSS_LOCATION_TOKEN=
-CYBERBOSS_LOCATION_HOME_CENTER=
-CYBERBOSS_LOCATION_WORK_CENTER=
-CYBERBOSS_LOCATION_KNOWN_PLACES=
-CYBERBOSS_LOCATION_PLACE_RADIUS_METERS=150
+HEART_ANCHOR_ENABLE_LOCATION_SERVER=false
+HEART_ANCHOR_LOCATION_HOST=0.0.0.0
+HEART_ANCHOR_LOCATION_PORT=4318
+HEART_ANCHOR_LOCATION_TOKEN=
+HEART_ANCHOR_LOCATION_HOME_CENTER=
+HEART_ANCHOR_LOCATION_WORK_CENTER=
+HEART_ANCHOR_LOCATION_KNOWN_PLACES=
+HEART_ANCHOR_LOCATION_PLACE_RADIUS_METERS=150
 ```
 
 外部能力：
 
 ```dotenv
-CYBERBOSS_VISION_MODE=auto
-CYBERBOSS_VISION_PROVIDER=openai-compatible
-CYBERBOSS_VISION_API_BASE_URL=
-CYBERBOSS_VISION_API_KEY=
-CYBERBOSS_VISION_MODEL=
+HEART_ANCHOR_VISION_MODE=auto
+HEART_ANCHOR_VISION_PROVIDER=openai-compatible
+HEART_ANCHOR_VISION_API_BASE_URL=
+HEART_ANCHOR_VISION_API_KEY=
+HEART_ANCHOR_VISION_MODEL=
 
-CYBERBOSS_WEB_SEARCH_PROVIDER=
-CYBERBOSS_BRAVE_SEARCH_API_KEY=
-CYBERBOSS_TAVILY_API_KEY=
+HEART_ANCHOR_WEB_SEARCH_PROVIDER=
+HEART_ANCHOR_BRAVE_SEARCH_API_KEY=
+HEART_ANCHOR_TAVILY_API_KEY=
 
-CYBERBOSS_NETEASE_COOKIE=
-CYBERBOSS_NETEASE_REAL_IP=
-CYBERBOSS_NETEASE_PROXY=
+HEART_ANCHOR_NETEASE_COOKIE=
+HEART_ANCHOR_NETEASE_REAL_IP=
+HEART_ANCHOR_NETEASE_PROXY=
 
-CYBERBOSS_ELEVENLABS_BASE_URL=
-CYBERBOSS_ELEVENLABS_API_KEY=
-CYBERBOSS_ELEVENLABS_VOICE_ID=
-CYBERBOSS_ELEVENLABS_MODEL_ID=
-CYBERBOSS_ELEVENLABS_SPEED=
+HEART_ANCHOR_ELEVENLABS_BASE_URL=
+HEART_ANCHOR_ELEVENLABS_API_KEY=
+HEART_ANCHOR_ELEVENLABS_VOICE_ID=
+HEART_ANCHOR_ELEVENLABS_MODEL_ID=
+HEART_ANCHOR_ELEVENLABS_SPEED=
 ```
 
 不要把真实 `.env`、`.cyberboss-state/`、cookie、bot token、API key 或聊天状态提交到仓库。
 
 ## Android / Phone Bridge / MacroDroid
 
-Android 侧推荐先用 MacroDroid 做系统事件采集，再通过 HTTP webhook 发给 Cyberboss。
+Android 侧推荐先用 MacroDroid 做系统事件采集，再通过 HTTP webhook 发给 Heart-Anchor。
 
 需要让云端确认后远程设置手机闹钟/计时器时，使用 Android companion app 的 Phone Bridge v1。服务端暴露 `cyberboss_android_alarm_set`、`cyberboss_android_timer_set`、`cyberboss_android_command_status`，设置类工具必须传 `confirmed: true`。
 
@@ -308,7 +308,7 @@ Cloud MCP tool
   -> Android AlarmClock intent
 
 Android / MacroDroid
-  -> Cyberboss Android webhook
+  -> Heart-Anchor Android webhook
   -> android-events.jsonl
   -> timeline / system trigger
   -> runtime decides whether to reply
@@ -324,28 +324,28 @@ Android / MacroDroid
 - 用户歌单、创建歌单、添加/删除歌曲、收藏歌单。
 - 日推、私人 FM、喜欢列表、最近播放、听歌打卡。
 
-如果 QR 登录被风控，可以手动设置 `CYBERBOSS_NETEASE_COOKIE`。cookie 不应进入 Git。
+如果 QR 登录被风控，可以手动设置 `HEART_ANCHOR_NETEASE_COOKIE`。cookie 不应进入 Git。
 
 ## Web Search
 
 支持 Brave Search 与 Tavily 两种 provider。工具返回紧凑结果，避免把整页搜索结果直接塞进上下文。
 
 ```dotenv
-CYBERBOSS_WEB_SEARCH_PROVIDER=tavily
-CYBERBOSS_TAVILY_API_KEY=<your_key>
+HEART_ANCHOR_WEB_SEARCH_PROVIDER=tavily
+HEART_ANCHOR_TAVILY_API_KEY=<your_key>
 ```
 
 或：
 
 ```dotenv
-CYBERBOSS_WEB_SEARCH_PROVIDER=brave
-CYBERBOSS_BRAVE_SEARCH_API_KEY=<your_key>
+HEART_ANCHOR_WEB_SEARCH_PROVIDER=brave
+HEART_ANCHOR_BRAVE_SEARCH_API_KEY=<your_key>
 ```
 
 ## 语音与音频
 
 - `voice-transcode-service` 负责 PCM / Silk / Telegram Ogg Opus 等转码。
-- `tts-service` 根据 `CYBERBOSS_TTS_PROVIDER` 选择 TTS provider。
+- `tts-service` 根据 `HEART_ANCHOR_TTS_PROVIDER` 选择 TTS provider。
 - `elevenlabs-tts-service` 负责 ElevenLabs / 兼容中转。
 - `aliyun-bailian-tts-service` 负责阿里云百炼 CosyVoice 非流式语音合成。
 - Telegram 端短 TTS 默认走原生语音气泡；音乐或长音频默认走播放器音频。
@@ -354,32 +354,32 @@ CYBERBOSS_BRAVE_SEARCH_API_KEY=<your_key>
 ElevenLabs 示例：
 
 ```dotenv
-CYBERBOSS_TTS_PROVIDER=elevenlabs
-CYBERBOSS_ELEVENLABS_API_KEY=<your_key>
-CYBERBOSS_ELEVENLABS_VOICE_ID=<voice_id>
-CYBERBOSS_ELEVENLABS_MODEL_ID=eleven_turbo_v2_5
-CYBERBOSS_ELEVENLABS_OUTPUT_FORMAT=mp3_44100_128
+HEART_ANCHOR_TTS_PROVIDER=elevenlabs
+HEART_ANCHOR_ELEVENLABS_API_KEY=<your_key>
+HEART_ANCHOR_ELEVENLABS_VOICE_ID=<voice_id>
+HEART_ANCHOR_ELEVENLABS_MODEL_ID=eleven_turbo_v2_5
+HEART_ANCHOR_ELEVENLABS_OUTPUT_FORMAT=mp3_44100_128
 ```
 
 阿里云百炼 CosyVoice 示例：
 
 ```dotenv
-CYBERBOSS_TTS_PROVIDER=aliyun
-CYBERBOSS_ALIYUN_DASHSCOPE_API_KEY=<your_dashscope_key>
-CYBERBOSS_ALIYUN_WORKSPACE_ID=<optional_workspace_id>
-CYBERBOSS_ALIYUN_TTS_MODEL=cosyvoice-v3.5-plus
-CYBERBOSS_ALIYUN_TTS_VOICE=<your_custom_voice_id>
-CYBERBOSS_ALIYUN_TTS_FORMAT=mp3
-CYBERBOSS_ALIYUN_TTS_SAMPLE_RATE=24000
-CYBERBOSS_ALIYUN_TTS_VOLUME=50
-CYBERBOSS_ALIYUN_TTS_RATE=1
-CYBERBOSS_ALIYUN_TTS_PITCH=1
-CYBERBOSS_ALIYUN_TTS_INSTRUCTION=温柔自然，像日常聊天。
+HEART_ANCHOR_TTS_PROVIDER=aliyun
+HEART_ANCHOR_ALIYUN_DASHSCOPE_API_KEY=<your_dashscope_key>
+HEART_ANCHOR_ALIYUN_WORKSPACE_ID=<optional_workspace_id>
+HEART_ANCHOR_ALIYUN_TTS_MODEL=cosyvoice-v3.5-plus
+HEART_ANCHOR_ALIYUN_TTS_VOICE=<your_custom_voice_id>
+HEART_ANCHOR_ALIYUN_TTS_FORMAT=mp3
+HEART_ANCHOR_ALIYUN_TTS_SAMPLE_RATE=24000
+HEART_ANCHOR_ALIYUN_TTS_VOLUME=50
+HEART_ANCHOR_ALIYUN_TTS_RATE=1
+HEART_ANCHOR_ALIYUN_TTS_PITCH=1
+HEART_ANCHOR_ALIYUN_TTS_INSTRUCTION=温柔自然，像日常聊天。
 ```
 
 ## Web 控制台
 
-控制台随 `npm run start` 内嵌在主进程里启动（默认监听 `127.0.0.1:3210`，`CYBERBOSS_WEB_CONSOLE=false` 可关闭），直接读写运行中的会话、队列和记忆，与聊天命令走同一套代码路径。面板包括：
+控制台随 `npm run start` 内嵌在主进程里启动（默认监听 `127.0.0.1:3210`，`HEART_ANCHOR_WEB_CONSOLE=false` 可关闭），直接读写运行中的会话、队列和记忆，与聊天命令走同一套代码路径。面板包括：
 
 - **总览**：渠道 / 运行时 / 当前会话状态、上下文用量、check-in 计划、队列水位。
 - **会话**：网页按钮执行 `/new`、`/compact`，查看等待审批和最近错误。
@@ -389,7 +389,7 @@ CYBERBOSS_ALIYUN_TTS_INSTRUCTION=温柔自然，像日常聊天。
 - **日志**：SSE 实时日志流。
 - **设置**：常用配置在明面，渠道 / 视觉 / 语音 / 位置等进阶参数折叠进「高级设置」；密钥只写不读，改动重启后生效。
 
-访问安全：未设置 token 时只放行本机回环，云端建议通过 SSH 隧道访问（`ssh -L 3210:127.0.0.1:3210 <server>`）；如需监听非本机地址，必须先设置 `CYBERBOSS_WEB_CONSOLE_TOKEN`。
+访问安全：未设置 token 时只放行本机回环，云端建议通过 SSH 隧道访问（`ssh -L 3210:127.0.0.1:3210 <server>`）；如需监听非本机地址，必须先设置 `HEART_ANCHOR_WEB_CONSOLE_TOKEN`。
 
 主进程不在时可用 `npm run web:console` 起独立救援模式：只读状态 + 配置编辑，不提供会话 / 队列 / 记忆操作。
 
@@ -407,22 +407,22 @@ GitHub Actions 会在 push / PR 时自动跑同样两步。部分 sticker 测试
 云端常驻推荐使用 systemd。最小思路：
 
 ```text
-WorkingDirectory=/opt/cyberboss
-EnvironmentFile=/opt/cyberboss/.env
+WorkingDirectory=/opt/heart-anchor
+EnvironmentFile=/opt/heart-anchor/.env
 ExecStart=/usr/bin/npm run start
 Restart=always
 ```
 
 部署时尤其注意：
 
-- `CYBERBOSS_STATE_DIR` 放在持久化目录。
+- `HEART_ANCHOR_STATE_DIR` 放在持久化目录。
 - `.env` 权限限制为只有服务用户可读。
 - Telegram token、Netease cookie、TTS key、search key 不要写进 README 或提交历史。
 - Web 控制台默认只监听本机；如要监听非本机地址必须先配置访问 token。Android webhook 不要裸奔公网。
 
 ## 与上游的关系
 
-本项目保留上游作为 `upstream`，个人二开版本在 `origin` 维护。上游提供了 Cyberboss 的早期设计和基础框架；本仓库在此基础上增加了 Telegram、Antigravity MVP、Android webhook、手表桥接、长期记忆系统、Google 日历/Gmail、Netease music、TTS、web search、内嵌 Web 控制台、CI 与大量测试和稳定性修复。
+本项目保留上游作为 `upstream`，个人二开版本在 `origin` 维护。上游提供了 Heart-Anchor 的早期设计和基础框架；本仓库在此基础上增加了 Telegram、Antigravity MVP、Android webhook、手表桥接、长期记忆系统、Google 日历/Gmail、Netease music、TTS、web search、内嵌 Web 控制台、CI 与大量测试和稳定性修复。
 
 ## License
 

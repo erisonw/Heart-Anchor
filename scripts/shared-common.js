@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { readEnvRaw, resolveDefaultStateDir } = require("../src/core/values");
 const http = require("http");
 const os = require("os");
 const path = require("path");
@@ -11,15 +12,15 @@ const {
 loadEnv();
 
 const rootDir = path.resolve(__dirname, "..");
-const port = String(process.env.CYBERBOSS_SHARED_PORT || "8765");
+const port = String(readEnvRaw("HEART_ANCHOR_SHARED_PORT") || "8765");
 const listenUrl = `ws://127.0.0.1:${port}`;
-const stateDir = process.env.CYBERBOSS_STATE_DIR || path.join(os.homedir(), ".cyberboss");
+const stateDir = resolveDefaultStateDir();
 const logDir = path.join(stateDir, "logs");
 const appServerPidFile = path.join(logDir, "shared-app-server.pid");
 const bridgePidFile = path.join(logDir, "shared-wechat.pid");
 const appServerLogFile = path.join(logDir, "shared-app-server.log");
 const accountsDir = path.join(stateDir, "accounts");
-const sessionFile = process.env.CYBERBOSS_SESSIONS_FILE || path.join(stateDir, "sessions.json");
+const sessionFile = readEnvRaw("HEART_ANCHOR_SESSIONS_FILE") || path.join(stateDir, "sessions.json");
 
 function loadEnv() {
   let dotenv = null;
@@ -29,7 +30,7 @@ function loadEnv() {
     return;
   }
 
-  const explicitEnvFile = normalizeText(process.env.CYBERBOSS_ENV_FILE);
+  const explicitEnvFile = normalizeText(readEnvRaw("HEART_ANCHOR_ENV_FILE"));
   const candidates = [
     explicitEnvFile,
     path.join(process.cwd(), ".env.server"),
@@ -135,7 +136,7 @@ function spawnDetachedCommand(command, args, { logFile, cwd = rootDir, env = {} 
 }
 
 async function ensureSharedAppServer() {
-  if (process.env.CYBERBOSS_RUNTIME && process.env.CYBERBOSS_RUNTIME !== "codex") {
+  if (readEnvRaw("HEART_ANCHOR_RUNTIME") && readEnvRaw("HEART_ANCHOR_RUNTIME") !== "codex") {
     return { pid: 0, status: "skipped" };
   }
 
@@ -150,20 +151,21 @@ async function ensureSharedAppServer() {
   }
 
   const env = {
+    HEART_ANCHOR_STATE_DIR: stateDir,
     CYBERBOSS_STATE_DIR: stateDir,
     TIMELINE_FOR_AGENT_STATE_DIR: stateDir,
   };
   if (!process.env.TIMELINE_FOR_AGENT_CHROME_PATH) {
     env.TIMELINE_FOR_AGENT_CHROME_PATH =
-      process.env.CYBERBOSS_SCREENSHOT_CHROME_PATH
+      readEnvRaw("HEART_ANCHOR_SCREENSHOT_CHROME_PATH")
       || (process.platform === "darwin"
         ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
         : "");
   }
 
-  const command = process.env.CYBERBOSS_CODEX_COMMAND || "codex";
+  const command = readEnvRaw("HEART_ANCHOR_CODEX_COMMAND") || "codex";
   const mcpConfigArgs = buildCodexMcpConfigArgs(resolveCodexProjectToolMcpServerConfig({
-    cyberbossHome: process.env.CYBERBOSS_HOME || rootDir,
+    cyberbossHome: readEnvRaw("HEART_ANCHOR_HOME") || rootDir,
   }));
   const pid = spawnDetachedCommand(command, [...mcpConfigArgs, "app-server", "--listen", listenUrl], {
     logFile: appServerLogFile,
@@ -219,7 +221,7 @@ function resolveBoundThread(workspaceRoot) {
   if (!fs.existsSync(sessionFile)) {
     throw new Error(`session file not found: ${sessionFile}`);
   }
-  const runtimeId = normalizeText(process.env.CYBERBOSS_RUNTIME || "codex");
+  const runtimeId = normalizeText(readEnvRaw("HEART_ANCHOR_RUNTIME") || "codex");
   const data = JSON.parse(fs.readFileSync(sessionFile, "utf8"));
   const currentAccountId = resolveCurrentAccountId();
   const bindings = Object.values(data.bindings || {})

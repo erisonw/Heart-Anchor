@@ -1,4 +1,5 @@
 const { spawn } = require("child_process");
+const { readEnvRaw, resolveDefaultStateDir } = require("../src/core/values");
 const net = require("net");
 const fs = require("fs");
 const os = require("os");
@@ -11,13 +12,13 @@ const {
 } = require("./shared-common");
 
 async function main() {
-  const workspaceRoot = process.env.CYBERBOSS_WORKSPACE_ROOT || process.cwd();
-  const runtime = process.env.CYBERBOSS_RUNTIME || "codex";
+  const workspaceRoot = readEnvRaw("HEART_ANCHOR_WORKSPACE_ROOT") || process.cwd();
+  const runtime = readEnvRaw("HEART_ANCHOR_RUNTIME") || "codex";
 
   if (runtime === "codex") {
     await ensureSharedAppServer();
     const { threadId, workspaceRoot: resolvedWorkspaceRoot } = resolveBoundThread(workspaceRoot);
-    const child = spawn(process.env.CYBERBOSS_CODEX_COMMAND || "codex", [
+    const child = spawn(readEnvRaw("HEART_ANCHOR_CODEX_COMMAND") || "codex", [
       "resume",
       threadId,
       "--remote",
@@ -42,12 +43,12 @@ async function main() {
 
   // For Claude: connect to the bridge's IPC socket so we can observe and
   // interact with the same ClaudeCode process that handles WeChat messages.
-  const stateDir = process.env.CYBERBOSS_STATE_DIR || path.join(os.homedir(), ".cyberboss");
+  const stateDir = resolveDefaultStateDir();
   const socketPath = path.join(stateDir, "claudecode-runtime.sock");
 
   if (!fs.existsSync(socketPath)) {
     console.error(`Claude IPC socket not found: ${socketPath}`);
-    console.error("Make sure the bridge is running with CYBERBOSS_RUNTIME=claudecode.");
+    console.error("Make sure the bridge is running with HEART_ANCHOR_RUNTIME=claudecode.");
     process.exit(1);
   }
 

@@ -1,5 +1,44 @@
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+
+const ENV_PREFIX = "HEART_ANCHOR_";
+const LEGACY_ENV_PREFIX = "CYBERBOSS_";
+
 function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+// 读环境变量：优先 HEART_ANCHOR_ 新前缀，回退历史 CYBERBOSS_ 前缀，旧部署无需迁移。
+function readEnvRaw(name) {
+  const primary = process.env[name];
+  if (typeof primary === "string" && primary.trim() !== "") {
+    return primary;
+  }
+  if (name.startsWith(ENV_PREFIX)) {
+    const legacy = process.env[LEGACY_ENV_PREFIX + name.slice(ENV_PREFIX.length)];
+    if (typeof legacy === "string" && legacy.trim() !== "") {
+      return legacy;
+    }
+  }
+  return primary;
+}
+
+function legacyEnvName(name) {
+  return name.startsWith(ENV_PREFIX) ? LEGACY_ENV_PREFIX + name.slice(ENV_PREFIX.length) : "";
+}
+
+// 默认状态目录：已有 ~/.cyberboss 的旧部署继续使用，全新安装用 ~/.heart-anchor。
+function resolveDefaultStateDir() {
+  const configured = normalizeText(readEnvRaw("HEART_ANCHOR_STATE_DIR"));
+  if (configured) {
+    return configured;
+  }
+  const legacyDir = path.join(os.homedir(), ".cyberboss");
+  if (fs.existsSync(legacyDir)) {
+    return legacyDir;
+  }
+  return path.join(os.homedir(), ".heart-anchor");
 }
 
 function normalizeBoolean(value) {
@@ -66,6 +105,8 @@ function formatCompactNumber(value) {
 }
 
 module.exports = {
+  ENV_PREFIX,
+  LEGACY_ENV_PREFIX,
   normalizeText,
   normalizeBoolean,
   normalizeInteger,
@@ -73,4 +114,7 @@ module.exports = {
   offsetIsoTime,
   hashLite,
   formatCompactNumber,
+  readEnvRaw,
+  legacyEnvName,
+  resolveDefaultStateDir,
 };

@@ -54,7 +54,7 @@ function createClaudeCodeRuntimeAdapter(config) {
     }
     const projectSettings = ensureClaudeProjectMcpConfig({
       workspaceRoot,
-      cyberbossHome: process.env.CYBERBOSS_HOME || path.resolve(__dirname, "..", "..", "..", ".."),
+      cyberbossHome: process.env.HEART_ANCHOR_HOME || process.env.CYBERBOSS_HOME || path.resolve(__dirname, "..", "..", "..", ".."),
     });
     console.log(
       `[claudecode-runtime] workspace=${workspaceRoot} mcp_config=${projectSettings.configPath} server=${projectSettings.serverName}`

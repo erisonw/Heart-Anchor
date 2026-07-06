@@ -1,4 +1,5 @@
 const http = require("http");
+const { readEnvRaw, resolveDefaultStateDir } = require("../src/core/values");
 const {
   listenUrl,
   appServerPidFile,
@@ -8,7 +9,7 @@ const {
 } = require("./shared-common");
 
 async function main() {
-  const runtime = process.env.CYBERBOSS_RUNTIME || "codex";
+  const runtime = readEnvRaw("HEART_ANCHOR_RUNTIME") || "codex";
   const isCodex = runtime === "codex";
   console.log(`runtime=${runtime}`);
   console.log(`listen=${listenUrl}`);

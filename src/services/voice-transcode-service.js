@@ -231,7 +231,7 @@ function transcodeAudioToOggOpusWithFfmpeg({ filePath, outputPath, ffmpegPath, b
     child.stderr.on("data", (chunk) => stderr.push(chunk));
     child.on("error", (error) => {
       if (error.code === "ENOENT") {
-        reject(new Error("ffmpeg is required to transcode audio to Telegram Ogg Opus voice. Install ffmpeg or configure CYBERBOSS_FFMPEG_PATH."));
+        reject(new Error("ffmpeg is required to transcode audio to Telegram Ogg Opus voice. Install ffmpeg or configure HEART_ANCHOR_FFMPEG_PATH."));
         return;
       }
       reject(error);
@@ -257,6 +257,9 @@ function buildOggOutputPath(filePath) {
 }
 
 function resolveDefaultFfmpegPath() {
+  if (process.env.HEART_ANCHOR_FFMPEG_PATH) {
+    return process.env.HEART_ANCHOR_FFMPEG_PATH;
+  }
   if (process.env.CYBERBOSS_FFMPEG_PATH) {
     return process.env.CYBERBOSS_FFMPEG_PATH;
   }

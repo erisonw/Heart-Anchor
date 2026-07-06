@@ -1,17 +1,17 @@
 # Android Phone Bridge V1
 
-本文说明 `Cyberboss Phone Bridge` 的 v1 命令链路：云端 agent 在得到用户明确确认后，把 `set_alarm` / `set_timer` 命令写入服务器队列；手机端通过 FCM 立即唤醒并用前台服务每 30 秒兜底轮询，最后调用 Android 系统 Clock intent。
+本文说明 `Heart-Anchor Phone Bridge` 的 v1 命令链路：云端 agent 在得到用户明确确认后，把 `set_alarm` / `set_timer` 命令写入服务器队列；手机端通过 FCM 立即唤醒并用前台服务每 30 秒兜底轮询，最后调用 Android 系统 Clock intent。
 
 ## 1. 服务端配置
 
 ```dotenv
-CYBERBOSS_ENABLE_ANDROID_WEBHOOK=true
-CYBERBOSS_ANDROID_WEBHOOK_HOST=0.0.0.0
-CYBERBOSS_ANDROID_WEBHOOK_PORT=4319
-CYBERBOSS_ANDROID_WEBHOOK_TOKEN=<shared-device-token>
-CYBERBOSS_ANDROID_COMMANDS_ENABLED=true
-CYBERBOSS_ANDROID_DEFAULT_DEVICE_ID=phone-main
-CYBERBOSS_FIREBASE_SERVICE_ACCOUNT_FILE=/absolute/path/firebase-service-account.json
+HEART_ANCHOR_ENABLE_ANDROID_WEBHOOK=true
+HEART_ANCHOR_ANDROID_WEBHOOK_HOST=0.0.0.0
+HEART_ANCHOR_ANDROID_WEBHOOK_PORT=4319
+HEART_ANCHOR_ANDROID_WEBHOOK_TOKEN=<shared-device-token>
+HEART_ANCHOR_ANDROID_COMMANDS_ENABLED=true
+HEART_ANCHOR_ANDROID_DEFAULT_DEVICE_ID=phone-main
+HEART_ANCHOR_FIREBASE_SERVICE_ACCOUNT_FILE=/absolute/path/firebase-service-account.json
 ```
 
 队列文件默认写在：
@@ -20,7 +20,7 @@ CYBERBOSS_FIREBASE_SERVICE_ACCOUNT_FILE=/absolute/path/firebase-service-account.
 ~/.cyberboss/android-commands.json
 ```
 
-FCM payload 只发送 `cyberboss_command_available` 这类唤醒信号；具体命令内容仍由手机用 bearer token 从 Cyberboss 拉取。
+FCM payload 只发送 `cyberboss_command_available` 这类唤醒信号；具体命令内容仍由手机用 bearer token 从 Heart-Anchor 拉取。
 
 ## 2. Android app 配置
 
@@ -36,7 +36,7 @@ clients/galaxy-watch-health-bridge
 com.erisonw.cyberboss.healthbridge
 ```
 
-可见 app 名称为 `Cyberboss Phone Bridge`。Firebase Android app 需要使用同一个 package id，并把下载到的 `google-services.json` 放到：
+可见 app 名称为 `Heart-Anchor Phone Bridge`。Firebase Android app 需要使用同一个 package id，并把下载到的 `google-services.json` 放到：
 
 ```text
 clients/galaxy-watch-health-bridge/app/google-services.json
@@ -44,8 +44,8 @@ clients/galaxy-watch-health-bridge/app/google-services.json
 
 首次打开后填写：
 
-- `Cyberboss webhook URL`: `http://<server-host>:4319/api/android/events`
-- `Cyberboss webhook token`: `CYBERBOSS_ANDROID_WEBHOOK_TOKEN`
+- `Heart-Anchor webhook URL`: `http://<server-host>:4319/api/android/events`
+- `Heart-Anchor webhook token`: `HEART_ANCHOR_ANDROID_WEBHOOK_TOKEN`
 - `deviceId`: `phone-main`
 
 然后点：

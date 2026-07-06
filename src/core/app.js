@@ -117,7 +117,7 @@ class CyberbossApp {
         .then(() => this.handleRuntimeEvent(event))
         .catch((error) => {
           const message = error instanceof Error ? error.stack || error.message : String(error);
-          console.error(`[cyberboss] runtime event handling failed type=${event?.type || "(unknown)"} ${message}`);
+          console.error(`[heart-anchor] runtime event handling failed type=${event?.type || "(unknown)"} ${message}`);
         });
     });
   }
@@ -153,17 +153,17 @@ class CyberbossApp {
     const syncBuffer = this.channelAdapter.loadSyncBuffer();
     await this.restoreBoundThreadSubscriptions();
 
-    console.log("[cyberboss] bootstrap ok");
-    console.log(`[cyberboss] channel=${this.channelAdapter.describe().id}`);
-    console.log(`[cyberboss] runtime=${this.runtimeAdapter.describe().id}`);
-    console.log(`[cyberboss] timeline=${this.timelineIntegration.describe().id}`);
-    console.log(`[cyberboss] account=${account.accountId}`);
-    console.log(`[cyberboss] baseUrl=${account.baseUrl}`);
-    console.log(`[cyberboss] workspaceRoot=${this.config.workspaceRoot}`);
-    console.log(`[cyberboss] knownContextTokens=${knownContextTokens}`);
-    console.log(`[cyberboss] syncBuffer=${syncBuffer ? "ready" : "empty"}`);
-    console.log(`[cyberboss] runtimeEndpoint=${runtimeState.endpoint || runtimeState.command || "(spawn)"}`);
-    console.log(`[cyberboss] runtimeModels=${runtimeState.models?.length || 0}`);
+    console.log("[heart-anchor] bootstrap ok");
+    console.log(`[heart-anchor] channel=${this.channelAdapter.describe().id}`);
+    console.log(`[heart-anchor] runtime=${this.runtimeAdapter.describe().id}`);
+    console.log(`[heart-anchor] timeline=${this.timelineIntegration.describe().id}`);
+    console.log(`[heart-anchor] account=${account.accountId}`);
+    console.log(`[heart-anchor] baseUrl=${account.baseUrl}`);
+    console.log(`[heart-anchor] workspaceRoot=${this.config.workspaceRoot}`);
+    console.log(`[heart-anchor] knownContextTokens=${knownContextTokens}`);
+    console.log(`[heart-anchor] syncBuffer=${syncBuffer ? "ready" : "empty"}`);
+    console.log(`[heart-anchor] runtimeEndpoint=${runtimeState.endpoint || runtimeState.command || "(spawn)"}`);
+    console.log(`[heart-anchor] runtimeModels=${runtimeState.models?.length || 0}`);
     if (this.config.startWithLocationServer) {
       await this.ensureLocationServerStarted();
     }
@@ -176,11 +176,11 @@ class CyberbossApp {
     if (this.calendarService?.isEnabled()) {
       await this.calendarService.start();
     }
-    console.log("[cyberboss] bridge loop started; waiting for WeChat messages.");
+    console.log("[heart-anchor] bridge loop started; waiting for WeChat messages.");
     if (this.config.startWithCheckin) {
-      console.log("[cyberboss] checkin: enabled");
+      console.log("[heart-anchor] checkin: enabled");
       void runSystemCheckinPoller(this.config).catch((error) => {
-        console.error(`[cyberboss] checkin poller stopped: ${error.message}`);
+        console.error(`[heart-anchor] checkin poller stopped: ${error.message}`);
       });
     }
 
@@ -232,7 +232,7 @@ class CyberbossApp {
           }
 
           consecutiveFailures += 1;
-          console.error(`[cyberboss] poll failed: ${formatErrorMessage(error)}`);
+          console.error(`[heart-anchor] poll failed: ${formatErrorMessage(error)}`);
           await sleep(consecutiveFailures >= MAX_CONSECUTIVE_FAILURES ? BACKOFF_DELAY_MS : RETRY_DELAY_MS);
         }
       }
@@ -255,7 +255,7 @@ class CyberbossApp {
       onAccepted: (result) => this.handleLocationAccepted(result),
     });
     console.log(
-      `[cyberboss] locationServer=http://${this.config.locationHost}:${this.config.locationPort} store=${this.config.locationStoreFile}`
+      `[heart-anchor] locationServer=http://${this.config.locationHost}:${this.config.locationPort} store=${this.config.locationStoreFile}`
     );
     return this.projectServices.whereabouts.server || null;
   }
@@ -275,7 +275,7 @@ class CyberbossApp {
       onAccepted: (result) => this.handleAndroidEventAccepted(result),
     });
     console.log(
-      `[cyberboss] androidWebhook=http://${this.config.androidWebhookHost}:${this.config.androidWebhookPort} events=${this.config.androidEventsFile}`
+      `[heart-anchor] androidWebhook=http://${this.config.androidWebhookHost}:${this.config.androidWebhookPort} events=${this.config.androidEventsFile}`
     );
     return this.projectServices.androidIngest.server || null;
   }
@@ -294,10 +294,10 @@ class CyberbossApp {
     const { startEmbeddedWebConsole } = require("../web-console/server");
     try {
       this.webConsole = await startEmbeddedWebConsole({ app: this, config: this.config });
-      console.log(`[cyberboss] webConsole=http://${this.config.webConsoleHost}:${this.config.webConsolePort}`);
+      console.log(`[heart-anchor] webConsole=http://${this.config.webConsoleHost}:${this.config.webConsolePort}`);
     } catch (error) {
       this.webConsole = null;
-      console.error(`[cyberboss] web console failed to start: ${formatErrorMessage(error)}`);
+      console.error(`[heart-anchor] web console failed to start: ${formatErrorMessage(error)}`);
     }
     return this.webConsole;
   }
@@ -315,7 +315,7 @@ class CyberbossApp {
     const eventType = normalizeCommandArgument(result?.event?.eventType) || "android_event";
     const deviceId = normalizeCommandArgument(result?.event?.deviceId) || "unknown-device";
     const summary = normalizeCommandArgument(result?.event?.summary) || eventType;
-    console.log(`[cyberboss] android event accepted device=${deviceId} type=${eventType} summary=${summary}`);
+    console.log(`[heart-anchor] android event accepted device=${deviceId} type=${eventType} summary=${summary}`);
     await this.writeAndroidEventToTimeline(result?.event);
     if (!this.activeAccountId) {
       return;
@@ -329,13 +329,13 @@ class CyberbossApp {
       return;
     }
     if (this.systemMessageQueue.hasPendingForAccount(this.activeAccountId)) {
-      console.log(`[cyberboss] android trigger skipped (pending wake) type=${eventType}`);
+      console.log(`[heart-anchor] android trigger skipped (pending wake) type=${eventType}`);
       return;
     }
     const triggerKey = deriveAndroidTriggerKey(result?.event);
     const nowMs = Date.now();
     if (!this.androidWakeSuppressor.shouldFire(triggerKey, nowMs)) {
-      console.log(`[cyberboss] android trigger skipped (cooldown) key=${triggerKey}`);
+      console.log(`[heart-anchor] android trigger skipped (cooldown) key=${triggerKey}`);
       return;
     }
     this.androidWakeSuppressor.markFired(triggerKey, nowMs);
@@ -422,11 +422,11 @@ class CyberbossApp {
     try {
       await this.projectServices.timeline.write(timelineWrite);
       console.log(
-        `[cyberboss] android timeline write date=${timelineWrite.date} title=${timelineWrite.events?.[0]?.title || "android"}`
+        `[heart-anchor] android timeline write date=${timelineWrite.date} title=${timelineWrite.events?.[0]?.title || "android"}`
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error || "unknown error");
-      console.warn(`[cyberboss] android timeline write failed ${message}`);
+      console.warn(`[heart-anchor] android timeline write failed ${message}`);
     }
   }
 
@@ -477,7 +477,7 @@ class CyberbossApp {
 
     const inboundKey = buildInboundMessageDedupeKey(normalized);
     if (hasProcessedInboundMessageKey(this.processedInboundMessageKeys, inboundKey)) {
-      console.log(`[cyberboss] duplicate inbound message ignored key=${inboundKey}`);
+      console.log(`[heart-anchor] duplicate inbound message ignored key=${inboundKey}`);
       return;
     }
     markProcessedInboundMessageKey(this.processedInboundMessageKeys, inboundKey);
@@ -515,7 +515,7 @@ class CyberbossApp {
     });
     this.streamDelivery.setDeferredReplyPrefix(bindingKey, formatDeferredSystemReplyBatch(pendingReplies));
     console.warn(
-      `[cyberboss] queued deferred reply prefix sender=${normalized.senderId} count=${pendingReplies.length}`
+      `[heart-anchor] queued deferred reply prefix sender=${normalized.senderId} count=${pendingReplies.length}`
     );
   }
 
@@ -714,7 +714,7 @@ class CyberbossApp {
     draft.timer = setTimeout(() => {
       void this.flushPendingImageInboundBatch({ bindingKey, workspaceRoot }).catch((error) => {
         const message = error instanceof Error ? error.stack || error.message : String(error);
-        console.error(`[cyberboss] image inbound debounce flush failed ${message}`);
+        console.error(`[heart-anchor] image inbound debounce flush failed ${message}`);
       });
     }, Math.max(0, Number(delayMs) || 0));
     this.pendingImageInboundByScope.set(scopeKey, draft);
@@ -1021,7 +1021,7 @@ class CyberbossApp {
         });
       } catch (error) {
         const messageText = error instanceof Error ? error.message : String(error || "unknown error");
-        console.error(`[cyberboss] timeline screenshot failed job=${job.id} ${messageText}`);
+        console.error(`[heart-anchor] timeline screenshot failed job=${job.id} ${messageText}`);
         await this.channelAdapter.sendTyping({
           userId: job.senderId,
           status: 0,
@@ -1618,12 +1618,12 @@ class CyberbossApp {
       return;
     }
     console.log(
-      `[cyberboss] approval response requested thread=${threadId} requestId=${approval.requestId} mode=${approvalResponse.result ? "result" : "decision"} workspace=${workspaceRoot}`
+      `[heart-anchor] approval response requested thread=${threadId} requestId=${approval.requestId} mode=${approvalResponse.result ? "result" : "decision"} workspace=${workspaceRoot}`
     );
     await this.runtimeAdapter.respondApproval(approvalResponse);
     this.runtimeAdapter.getSessionStore().clearApprovalPrompt(threadId);
     console.log(
-      `[cyberboss] approval response delivered thread=${threadId} requestId=${approval.requestId}`
+      `[heart-anchor] approval response delivered thread=${threadId} requestId=${approval.requestId}`
     );
     if (command.name === "always" && isApprovalAcceptResponse(approvalResponse)) {
       this.runtimeAdapter.getSessionStore().rememberApprovalPrefixForWorkspace(workspaceRoot, approval.commandTokens);
@@ -1808,7 +1808,7 @@ class CyberbossApp {
       if (promptState?.signature && promptState.signature === promptSignature) {
         sessionStore.rememberApprovalPrompt(event.payload.threadId, event.payload.requestId, promptSignature);
         console.log(
-          `[cyberboss] approval prompt deduped thread=${event.payload.threadId} requestId=${event.payload.requestId}`
+          `[heart-anchor] approval prompt deduped thread=${event.payload.threadId} requestId=${event.payload.requestId}`
         );
         return;
       }
@@ -1867,12 +1867,12 @@ class CyberbossApp {
     const target = this.resolveReplyTargetForBinding(bindingKey);
     if (!target) {
       console.warn(
-        `[cyberboss] approval prompt skipped binding=${bindingKey} requestId=${approval?.requestId || ""} reason=no_reply_target`
+        `[heart-anchor] approval prompt skipped binding=${bindingKey} requestId=${approval?.requestId || ""} reason=no_reply_target`
       );
       return;
     }
     console.log(
-      `[cyberboss] approval prompt sending binding=${bindingKey} user=${target.userId} requestId=${approval?.requestId || ""}`
+      `[heart-anchor] approval prompt sending binding=${bindingKey} user=${target.userId} requestId=${approval?.requestId || ""}`
     );
     await this.channelAdapter.sendTyping({
       userId: target.userId,
@@ -1886,7 +1886,7 @@ class CyberbossApp {
       preserveBlock: true,
     });
     console.log(
-      `[cyberboss] approval prompt delivered binding=${bindingKey} user=${target.userId} requestId=${approval?.requestId || ""}`
+      `[heart-anchor] approval prompt delivered binding=${bindingKey} user=${target.userId} requestId=${approval?.requestId || ""}`
     );
   }
 
@@ -2111,7 +2111,7 @@ function appendMemoryContextToRuntimeText({ text, prepared, services }) {
     return [baseText, memoryContext].filter(Boolean).join("\n\n");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error || "unknown error");
-    console.warn(`[cyberboss] memory context build failed: ${message}`);
+    console.warn(`[heart-anchor] memory context build failed: ${message}`);
     return baseText;
   }
 }

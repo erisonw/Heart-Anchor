@@ -1,6 +1,6 @@
 # Galaxy Watch7 V1 Setup
 
-本文是 `Galaxy Watch7 + Samsung S23 Ultra + Samsung Health Data SDK` 接入 Cyberboss 的 v1 实操说明。Health Connect 仍保留为 fallback，但睡眠主路径已经改为直接读取 Samsung Health。
+本文是 `Galaxy Watch7 + Samsung S23 Ultra + Samsung Health Data SDK` 接入 Heart-Anchor 的 v1 实操说明。Health Connect 仍保留为 fallback，但睡眠主路径已经改为直接读取 Samsung Health。
 
 v1 只接两类高价值事件：
 
@@ -9,13 +9,13 @@ v1 只接两类高价值事件：
 
 ## 0. 云端准备
 
-确认 Cyberboss 云端已启用 Android webhook：
+确认 Heart-Anchor 云端已启用 Android webhook：
 
 ```env
-CYBERBOSS_ENABLE_ANDROID_WEBHOOK=true
-CYBERBOSS_ANDROID_WEBHOOK_HOST=0.0.0.0
-CYBERBOSS_ANDROID_WEBHOOK_PORT=4319
-CYBERBOSS_ANDROID_WEBHOOK_TOKEN=<your-secret-token>
+HEART_ANCHOR_ENABLE_ANDROID_WEBHOOK=true
+HEART_ANCHOR_ANDROID_WEBHOOK_HOST=0.0.0.0
+HEART_ANCHOR_ANDROID_WEBHOOK_PORT=4319
+HEART_ANCHOR_ANDROID_WEBHOOK_TOKEN=<your-secret-token>
 ```
 
 手机侧 webhook URL 使用：
@@ -55,12 +55,12 @@ clients/galaxy-watch-health-bridge/app/libs/samsung-health-data-api-1.1.0.aar
 clients/galaxy-watch-health-bridge
 ```
 
-用 Android Studio 打开这个目录，等待 Gradle sync，然后安装到 S23 Ultra。这个 app 现在显示为 `Cyberboss Phone Bridge`，仍保留睡眠摘要发送能力。
+用 Android Studio 打开这个目录，等待 Gradle sync，然后安装到 S23 Ultra。这个 app 现在显示为 `Heart-Anchor Phone Bridge`，仍保留睡眠摘要发送能力。
 
 首次打开 app 后填：
 
-- `Cyberboss webhook URL`: `http://<server-host>:4319/api/android/events`
-- `Cyberboss webhook token`: 云端 `CYBERBOSS_ANDROID_WEBHOOK_TOKEN`
+- `Heart-Anchor webhook URL`: `http://<server-host>:4319/api/android/events`
+- `Heart-Anchor webhook token`: 云端 `HEART_ANCHOR_ANDROID_WEBHOOK_TOKEN`
 - `deviceId`: 如果只做睡眠/手表事件可用 `watch-main`；如果也要用远程闹钟/计时器，建议改为 `phone-main`
 
 然后按顺序点：
@@ -97,7 +97,7 @@ clients/galaxy-watch-health-bridge
 v1 不做后台常驻。推荐用 MacroDroid 每天早上打开一次桥接 app：
 
 - Trigger: 固定时间，例如 `09:30`
-- Action: Launch Application -> `Cyberboss Watch Bridge`
+- Action: Launch Application -> `Heart-Anchor Watch Bridge`
 
 app 打开后会优先通过 Samsung Health Data SDK 读取 Samsung Health 里的最新整日睡眠摘要并发送；如果同一天已经发过，会显示 `Latest Samsung Health daily sleep summary was already sent.`。如果 Samsung Health Data SDK 没有授权，首次打开会弹出 Samsung Health 授权页，允许 `Sleep` 读取权限即可。
 
@@ -196,10 +196,10 @@ curl -s http://127.0.0.1:4319/readyz
 
 ## 7. Samsung Health 中国区 fallback
 
-如果 Samsung Health 自己能看到睡眠，但 Health Connect 的“数据和访问权限”里没有睡眠数据，说明睡眠没有被写入 Health Connect。此时可以先用 `Cyberboss Watch Bridge` 的手动 fallback：
+如果 Samsung Health 自己能看到睡眠，但 Health Connect 的“数据和访问权限”里没有睡眠数据，说明睡眠没有被写入 Health Connect。此时可以先用 `Heart-Anchor Watch Bridge` 的手动 fallback：
 
 1. 打开 Samsung Health 的睡眠页，读出睡眠时长。
-2. 回到 `Cyberboss Watch Bridge`。
+2. 回到 `Heart-Anchor Watch Bridge`。
 3. 在 `Manual sleep hours` / `Manual sleep minutes` 填入时长。
 4. 点 `Send Manual Sleep Summary`。
 

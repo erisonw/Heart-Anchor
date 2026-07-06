@@ -56,7 +56,7 @@ async function startWebConsole({ host = "", port = 0 } = {}) {
     port: resolvedPort,
     token: config.webConsoleToken,
   });
-  console.log(`[cyberboss] web console (standalone) at http://${resolvedHost}:${resolvedPort}`);
+  console.log(`[heart-anchor] web console (standalone) at http://${resolvedHost}:${resolvedPort}`);
   return consoleServer;
 }
 

@@ -1566,7 +1566,7 @@ test("handleStatusCommand asks to configure claudecode context window before sho
     contextToken: "ctx-1",
   });
 
-  assert.match(sent[0], /📦 context: set CYBERBOSS_CLAUDE_CONTEXT_WINDOW/);
+  assert.match(sent[0], /📦 context: set HEART_ANCHOR_CLAUDE_CONTEXT_WINDOW/);
 });
 
 test("handleStatusCommand shows approximate context details for claudecode when configured", async () => {

@@ -4,7 +4,7 @@ function formatContextStatusLine({ runtimeName, context, claudeContextWindow, cl
   if (runtimeName === "claudecode") {
     const configuredWindow = Number(claudeContextWindow);
     if (!Number.isFinite(configuredWindow) || configuredWindow <= 0) {
-      return "📦 context: set CYBERBOSS_CLAUDE_CONTEXT_WINDOW";
+      return "📦 context: set HEART_ANCHOR_CLAUDE_CONTEXT_WINDOW";
     }
     const reservedOutputTokens = Math.max(0, Number(claudeMaxOutputTokens) || 0);
     const availableMessageWindow = configuredWindow - reservedOutputTokens;

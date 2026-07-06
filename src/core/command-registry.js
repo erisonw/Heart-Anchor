@@ -318,7 +318,7 @@ function buildTerminalHelpText() {
   }
 
   lines.push("");
-  lines.push("Cyberboss capability operations are exposed to models as project tools, not terminal subcommands.");
+  lines.push("Heart-Anchor capability operations are exposed to models as project tools, not terminal subcommands.");
   return lines.join("\n");
 }
 

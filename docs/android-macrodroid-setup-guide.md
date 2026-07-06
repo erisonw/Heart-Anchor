@@ -1,24 +1,24 @@
 # Android MacroDroid Setup Guide
 
-本文是 Cyberboss Android MVP 的 MacroDroid 实操说明。
+本文是 Heart-Anchor Android MVP 的 MacroDroid 实操说明。
 
 配完之后，链路应该是：
 
 - MacroDroid 触发事件
-- HTTP Request 发到 Cyberboss
-- Cyberboss 写入 `android-events.jsonl`
+- HTTP Request 发到 Heart-Anchor
+- Heart-Anchor 写入 `android-events.jsonl`
 - 高价值事件进入 timeline / system trigger
 - Web Console 可看到最近设备与最近事件
 
-## 0. Cyberboss 端先准备好
+## 0. Heart-Anchor 端先准备好
 
-先在 Cyberboss 的 `.env` 或 Web Console 里确认：
+先在 Heart-Anchor 的 `.env` 或 Web Console 里确认：
 
 ```env
-CYBERBOSS_ENABLE_ANDROID_WEBHOOK=true
-CYBERBOSS_ANDROID_WEBHOOK_HOST=0.0.0.0
-CYBERBOSS_ANDROID_WEBHOOK_PORT=4319
-CYBERBOSS_ANDROID_WEBHOOK_TOKEN=your-secret-token
+HEART_ANCHOR_ENABLE_ANDROID_WEBHOOK=true
+HEART_ANCHOR_ANDROID_WEBHOOK_HOST=0.0.0.0
+HEART_ANCHOR_ANDROID_WEBHOOK_PORT=4319
+HEART_ANCHOR_ANDROID_WEBHOOK_TOKEN=your-secret-token
 ```
 
 然后启动：
@@ -74,7 +74,7 @@ Body 用 Raw JSON。
 
 ## 3. 时间字符串怎么处理
 
-Cyberboss 需要 `occurredAt` 是 ISO 风格时间。
+Heart-Anchor 需要 `occurredAt` 是 ISO 风格时间。
 
 如果 MacroDroid 不方便一次拼完整 ISO，可以先用变量拼成这种格式：
 
@@ -354,7 +354,7 @@ Cyberboss 需要 `occurredAt` 是 ISO 风格时间。
 - Mac 和手机是否同一局域网
 - URL 是否用了正确的局域网 IP
 - 4319 端口是否被防火墙拦住
-- Cyberboss 是否真的启动了 Android webhook
+- Heart-Anchor 是否真的启动了 Android webhook
 
 ### 401 Unauthorized
 

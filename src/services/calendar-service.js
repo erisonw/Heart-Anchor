@@ -39,17 +39,17 @@ class CalendarService {
     try {
       await this.refresh();
     } catch (error) {
-      this.logger.warn(`[cyberboss] calendar initial refresh failed: ${describeError(error)}`);
+      this.logger.warn(`[heart-anchor] calendar initial refresh failed: ${describeError(error)}`);
     }
     this.timer = setInterval(() => {
       this.refresh().catch((error) => {
-        this.logger.warn(`[cyberboss] calendar refresh failed: ${describeError(error)}`);
+        this.logger.warn(`[heart-anchor] calendar refresh failed: ${describeError(error)}`);
       });
     }, this.refreshMs);
     if (typeof this.timer.unref === "function") {
       this.timer.unref();
     }
-    this.logger.log(`[cyberboss] calendar poller started urls=${this.urls.length} interval=${Math.round(this.refreshMs / 1000)}s`);
+    this.logger.log(`[heart-anchor] calendar poller started urls=${this.urls.length} interval=${Math.round(this.refreshMs / 1000)}s`);
   }
 
   stop() {
@@ -80,7 +80,7 @@ class CalendarService {
       const occurrences = expandOccurrences(event, {
         fromMs: nowMs,
         toMs: horizonEnd,
-        onUnsupported: (info) => this.logger.warn(`[cyberboss] calendar skipped event uid=${info.uid || "(none)"} summary=${info.summary || "(none)"} ${info.reason}`),
+        onUnsupported: (info) => this.logger.warn(`[heart-anchor] calendar skipped event uid=${info.uid || "(none)"} summary=${info.summary || "(none)"} ${info.reason}`),
       });
       for (const occurrence of occurrences) {
         upcoming.push({
@@ -169,16 +169,16 @@ class CalendarService {
         redirect: "follow",
       });
       if (!response.ok) {
-        this.logger.warn(`[cyberboss] calendar fetch http=${response.status} url=${redactUrl(url)}`);
+        this.logger.warn(`[heart-anchor] calendar fetch http=${response.status} url=${redactUrl(url)}`);
         return { ok: false, events: [] };
       }
       const text = await response.text();
       const events = parseIcs(text, {
-        onUnsupported: (info) => this.logger.warn(`[cyberboss] calendar parse skipped uid=${info.uid || "(none)"} summary=${info.summary || "(none)"} ${info.reason}`),
+        onUnsupported: (info) => this.logger.warn(`[heart-anchor] calendar parse skipped uid=${info.uid || "(none)"} summary=${info.summary || "(none)"} ${info.reason}`),
       });
       return { ok: true, events };
     } catch (error) {
-      this.logger.warn(`[cyberboss] calendar fetch error url=${redactUrl(url)} ${describeError(error)}`);
+      this.logger.warn(`[heart-anchor] calendar fetch error url=${redactUrl(url)} ${describeError(error)}`);
       return { ok: false, events: [] };
     } finally {
       clearTimeout(timeout);

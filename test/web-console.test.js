@@ -200,35 +200,46 @@ test("log buffer keeps a bounded history and notifies subscribers", () => {
 test("saveEnvValues only touches submitted managed keys and honors secret placeholder", () => {
   const envFile = envStore.resolvePreferredEnvFile();
   fs.mkdirSync(path.dirname(envFile), { recursive: true });
-  fs.writeFileSync(envFile, "CYBERBOSS_USER_NAME=old-name\nCYBERBOSS_VISION_API_KEY=secret-1\nUNMANAGED_KEY=keep\n");
+  fs.writeFileSync(envFile, "HEART_ANCHOR_USER_NAME=old-name\nHEART_ANCHOR_VISION_API_KEY=secret-1\nUNMANAGED_KEY=keep\n");
 
   const result = envStore.saveEnvValues({
-    CYBERBOSS_USER_NAME: "new-name",
-    CYBERBOSS_VISION_API_KEY: envStore.SECRET_PLACEHOLDER,
+    HEART_ANCHOR_USER_NAME: "new-name",
+    HEART_ANCHOR_VISION_API_KEY: envStore.SECRET_PLACEHOLDER,
     NOT_A_MANAGED_KEY: "ignored",
   });
 
   const saved = envStore.readEnvFile(envFile);
-  assert.deepEqual(result.changedKeys, ["CYBERBOSS_USER_NAME"]);
-  assert.equal(saved.CYBERBOSS_USER_NAME, "new-name");
-  assert.equal(saved.CYBERBOSS_VISION_API_KEY, "secret-1");
+  assert.deepEqual(result.changedKeys, ["HEART_ANCHOR_USER_NAME"]);
+  assert.equal(saved.HEART_ANCHOR_USER_NAME, "new-name");
+  assert.equal(saved.HEART_ANCHOR_VISION_API_KEY, "secret-1");
   assert.equal(saved.UNMANAGED_KEY, "keep");
   assert.equal(saved.NOT_A_MANAGED_KEY, undefined);
 
-  envStore.saveEnvValues({ CYBERBOSS_VISION_API_KEY: "" });
-  assert.equal(envStore.readEnvFile(envFile).CYBERBOSS_VISION_API_KEY, undefined);
+  envStore.saveEnvValues({ HEART_ANCHOR_VISION_API_KEY: "" });
+  assert.equal(envStore.readEnvFile(envFile).HEART_ANCHOR_VISION_API_KEY, undefined);
+});
+
+test("saveEnvValues migrates legacy-prefixed keys on write", () => {
+  const envFile = envStore.resolvePreferredEnvFile();
+  fs.writeFileSync(envFile, "CYBERBOSS_USER_NAME=legacy-name\n");
+
+  envStore.saveEnvValues({ HEART_ANCHOR_USER_NAME: "renamed" });
+  const saved = envStore.readEnvFile(envFile);
+  assert.equal(saved.HEART_ANCHOR_USER_NAME, "renamed");
+  assert.equal(saved.CYBERBOSS_USER_NAME, undefined);
 });
 
 test("settings view masks secret values but reports set state", () => {
   const view = envStore.buildSettingsView({
-    CYBERBOSS_USER_NAME: "someone",
+    HEART_ANCHOR_USER_NAME: "someone",
+    // 旧前缀值应该在新 key 的字段里显示出来（读取回退）
     CYBERBOSS_TELEGRAM_BOT_TOKEN: "tg-secret",
   });
   const fields = view.flatMap((group) => group.fields);
-  const tokenField = fields.find((item) => item.key === "CYBERBOSS_TELEGRAM_BOT_TOKEN");
+  const tokenField = fields.find((item) => item.key === "HEART_ANCHOR_TELEGRAM_BOT_TOKEN");
   assert.equal(tokenField.value, "");
   assert.equal(tokenField.set, true);
-  const nameField = fields.find((item) => item.key === "CYBERBOSS_USER_NAME");
+  const nameField = fields.find((item) => item.key === "HEART_ANCHOR_USER_NAME");
   assert.equal(nameField.value, "someone");
   const basicGroups = view.filter((group) => !group.advanced);
   assert.ok(basicGroups.length >= 3);

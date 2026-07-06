@@ -1,6 +1,6 @@
 # Android MacroDroid Webhook Templates
 
-本文给出 Cyberboss Android MVP 的 5 个推荐 MacroDroid webhook 模板，以及 1 组手表数据模板。
+本文给出 Heart-Anchor Android MVP 的 5 个推荐 MacroDroid webhook 模板，以及 1 组手表数据模板。
 
 如果手表是 `Galaxy Watch7 + Samsung S23 Ultra + Health Connect`，优先参考专门的 v1 文档：
 
@@ -12,7 +12,7 @@
 - Method: `POST`
 - Header:
   - `Content-Type: application/json`
-  - `Authorization: Bearer <CYBERBOSS_ANDROID_WEBHOOK_TOKEN>`
+  - `Authorization: Bearer <HEART_ANCHOR_ANDROID_WEBHOOK_TOKEN>`
 
 建议每次请求都带：
 
@@ -149,7 +149,7 @@
 
 ## 6. 手表数据（通过手机中转）
 
-用途：把手表上的高价值状态通过手机 companion app、MacroDroid、Tasker 或其他自动化入口转成 webhook 发给 Cyberboss。第一版建议只接少量“真的有用”的事件，不要把连续心率、每分钟步数这种高频原始流量直接灌进来。
+用途：把手表上的高价值状态通过手机 companion app、MacroDroid、Tasker 或其他自动化入口转成 webhook 发给 Heart-Anchor。第一版建议只接少量“真的有用”的事件，不要把连续心率、每分钟步数这种高频原始流量直接灌进来。
 
 推荐支持的事件类型：
 
@@ -287,7 +287,7 @@ curl -X POST http://127.0.0.1:4319/api/android/events \
   }'
 ```
 
-## 当前 Cyberboss 默认行为
+## 当前 Heart-Anchor 默认行为
 
 - `foreground_app`: 接收，但默认不主动触发，也不写 timeline
 - `device_unlock`: 仅深夜连续解锁时触发

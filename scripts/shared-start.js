@@ -1,4 +1,5 @@
 const { spawn } = require("child_process");
+const { readEnvRaw, resolveDefaultStateDir } = require("../src/core/values");
 const {
   rootDir,
   listenUrl,
@@ -10,7 +11,7 @@ const {
 } = require("./shared-common");
 
 async function main() {
-  const runtime = process.env.CYBERBOSS_RUNTIME || "codex";
+  const runtime = readEnvRaw("HEART_ANCHOR_RUNTIME") || "codex";
   console.log(`starting shared bridge runtime=${runtime}`);
   const appServer = await ensureSharedAppServer();
   const appServerPidLabel = appServer.pid ? ` pid=${appServer.pid}` : "";
@@ -29,6 +30,7 @@ async function main() {
   const childEnv = { ...process.env };
   const isCodex = runtime === "codex";
   if (isCodex) {
+    childEnv.HEART_ANCHOR_CODEX_ENDPOINT = listenUrl;
     childEnv.CYBERBOSS_CODEX_ENDPOINT = listenUrl;
   }
 

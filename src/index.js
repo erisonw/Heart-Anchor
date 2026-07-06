@@ -4,6 +4,7 @@ const path = require("path");
 const dotenv = require("dotenv");
 
 const { readConfig } = require("./core/config");
+const { resolveDefaultStateDir } = require("./core/values");
 const { renderInstructionTemplate } = require("./core/instructions-template");
 const { CyberbossApp } = require("./core/app");
 const { runSystemCheckinPoller } = require("./app/system-checkin-poller");
@@ -14,16 +15,17 @@ const { runToolMcpServer } = require("./tools/mcp-stdio-server");
 const { startWebConsole } = require("./web-console/server");
 
 function ensureDefaultStateDirectory() {
-  fs.mkdirSync(path.join(os.homedir(), ".cyberboss"), { recursive: true });
+  fs.mkdirSync(resolveDefaultStateDir(), { recursive: true });
 }
 
 function loadEnv() {
   ensureDefaultStateDirectory();
-  const explicitEnvFile = normalizeText(process.env.CYBERBOSS_ENV_FILE);
+  const explicitEnvFile = normalizeText(process.env.HEART_ANCHOR_ENV_FILE) || normalizeText(process.env.CYBERBOSS_ENV_FILE);
   const candidates = [
     explicitEnvFile,
     path.join(process.cwd(), ".env.server"),
     path.join(process.cwd(), ".env"),
+    path.join(os.homedir(), ".heart-anchor", ".env"),
     path.join(os.homedir(), ".cyberboss", ".env"),
   ].filter(Boolean);
   for (const envPath of candidates) {
@@ -37,9 +39,9 @@ function loadEnv() {
 }
 
 function ensureRuntimeEnv() {
-  if (!process.env.CYBERBOSS_HOME) {
-    process.env.CYBERBOSS_HOME = path.resolve(__dirname, "..");
-  }
+  const home = process.env.HEART_ANCHOR_HOME || process.env.CYBERBOSS_HOME || path.resolve(__dirname, "..");
+  process.env.HEART_ANCHOR_HOME = home;
+  process.env.CYBERBOSS_HOME = home;
 }
 
 function normalizeText(value) {
@@ -90,12 +92,12 @@ function installRuntimeErrorHooks() {
 
   process.on("unhandledRejection", (reason) => {
     const message = reason instanceof Error ? reason.stack || reason.message : String(reason);
-    console.error(`[cyberboss] unhandled rejection ${message}`);
+    console.error(`[heart-anchor] unhandled rejection ${message}`);
   });
 
   process.on("uncaughtException", (error) => {
     const message = error instanceof Error ? error.stack || error.message : String(error);
-    console.error(`[cyberboss] uncaught exception ${message}`);
+    console.error(`[heart-anchor] uncaught exception ${message}`);
     process.exitCode = 1;
   });
 }

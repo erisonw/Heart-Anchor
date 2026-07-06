@@ -312,7 +312,7 @@ class StreamDelivery {
       const failedDelivery = pendingDeliveries[0];
       const failedText = buildDeliveryPreviewText(failedDelivery);
       void this.deferSystemReply(state, buildEffectiveReplyText(state.deferredReplyPrefix, failedText), error, "plain_reply");
-      console.error(`[cyberboss] failed to deliver reply thread=${state.threadId}: ${error.message}`);
+      console.error(`[heart-anchor] failed to deliver reply thread=${state.threadId}: ${error.message}`);
     });
 
     await state.sendChain;
@@ -328,14 +328,14 @@ class StreamDelivery {
     if (resolved.kind === "silent") {
       this.markAllItemsSent(state);
       console.log(
-        `[cyberboss] suppressed system reply thread=${state.threadId} action=silent preview=${JSON.stringify(replyText.slice(0, 120))}`
+        `[heart-anchor] suppressed system reply thread=${state.threadId} action=silent preview=${JSON.stringify(replyText.slice(0, 120))}`
       );
       return;
     }
 
     if (resolved.kind !== "send_message") {
       console.error(
-        `[cyberboss] invalid system reply thread=${state.threadId} reason=${resolved.reason} preview=${JSON.stringify(replyText.slice(0, 160))}`
+        `[heart-anchor] invalid system reply thread=${state.threadId} reason=${resolved.reason} preview=${JSON.stringify(replyText.slice(0, 160))}`
       );
       return;
     }
@@ -344,7 +344,7 @@ class StreamDelivery {
       await this.sendSystemReply(state, resolved.message);
       this.markAllItemsSent(state);
     }).catch((error) => {
-      console.error(`[cyberboss] failed to deliver system reply thread=${state.threadId}: ${error.message}`);
+      console.error(`[heart-anchor] failed to deliver system reply thread=${state.threadId}: ${error.message}`);
     });
 
     await state.sendChain;
@@ -361,7 +361,7 @@ class StreamDelivery {
 
     if (delivery.kind === "invalid_action") {
       console.error(
-        `[cyberboss] invalid structured action item thread=${state.threadId} reason=${delivery.reason} preview=${JSON.stringify((delivery.sourceText || "").slice(0, 160))}`
+        `[heart-anchor] invalid structured action item thread=${state.threadId} reason=${delivery.reason} preview=${JSON.stringify((delivery.sourceText || "").slice(0, 160))}`
       );
       return;
     }
@@ -407,7 +407,7 @@ class StreamDelivery {
         throw error;
       }
       console.warn(
-        `[cyberboss] system reply retrying with refreshed context token thread=${state.threadId} user=${retryTarget.userId}`
+        `[heart-anchor] system reply retrying with refreshed context token thread=${state.threadId} user=${retryTarget.userId}`
       );
       try {
         const retryPayload = {
@@ -457,11 +457,11 @@ class StreamDelivery {
         kind,
       });
       console.warn(
-        `[cyberboss] deferred system reply until the next inbound message thread=${state.threadId} user=${target.userId}`
+        `[heart-anchor] deferred system reply until the next inbound message thread=${state.threadId} user=${target.userId}`
       );
       return true;
     } catch (deferError) {
-      console.error(`[cyberboss] failed to defer system reply thread=${state.threadId}: ${deferError.message}`);
+      console.error(`[heart-anchor] failed to defer system reply thread=${state.threadId}: ${deferError.message}`);
       return false;
     }
   }
@@ -703,7 +703,7 @@ function sanitizeReplyText(plainReplyText) {
   let trimmed = trimOuterBlankLines(protocolSanitized.text || "");
   const deEnglished = stripEnglishReasoningParagraphs(trimmed);
   if (deEnglished !== trimmed) {
-    console.warn(`[cyberboss] stripped english reasoning block from reply: ${truncateForLog(trimmed)}`);
+    console.warn(`[heart-anchor] stripped english reasoning block from reply: ${truncateForLog(trimmed)}`);
     trimmed = deEnglished;
   }
   if (!trimmed) {
@@ -713,7 +713,7 @@ function sanitizeReplyText(plainReplyText) {
   if (leak) {
     const sanitized = sanitizeReasoningLeakText(trimmed);
     if (sanitized !== trimmed) {
-      console.warn(`[cyberboss] suspected reasoning leak in reply (${leak}): ${truncateForLog(trimmed)}`);
+      console.warn(`[heart-anchor] suspected reasoning leak in reply (${leak}): ${truncateForLog(trimmed)}`);
     }
     return sanitized;
   }

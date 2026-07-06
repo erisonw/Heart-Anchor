@@ -1,0 +1,39 @@
+{
+  "name": "cyberboss",
+  "version": "0.1.0",
+  "description": "A personal agent bridge core for life operations.",
+  "license": "AGPL-3.0-only",
+  "private": false,
+  "type": "commonjs",
+  "main": "src/index.js",
+  "bin": {
+    "cyberboss": "./bin/cyberboss.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node ./bin/cyberboss.js start",
+    "start:checkin": "node ./bin/cyberboss.js start --checkin",
+    "login": "node ./bin/cyberboss.js login",
+    "accounts": "node ./bin/cyberboss.js accounts",
+    "doctor": "node ./bin/cyberboss.js doctor",
+    "help": "node ./bin/cyberboss.js help",
+    "web:console": "node ./bin/cyberboss.js web-console",
+    "shared:start": "node ./scripts/shared-start.js",
+    "shared:open": "node ./scripts/shared-open.js",
+    "shared:status": "node ./scripts/shared-status.js",
+    "check": "find src bin scripts -name \"*.js\" -print0 | xargs -0 -n1 node --check",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "dotenv": "^16.4.7",
+    "NeteaseCloudMusicApi": "^4.32.0",
+    "qrcode-terminal": "0.12.0",
+    "silk-wasm": "^3.7.1",
+    "timeline-for-agent": "github:WenXiaoWendy/timeline-for-agent#main",
+    "whereabouts-mcp": "github:WenXiaoWendy/whereabouts-mcp#main",
+    "ws": "^8.19.0"
+  }
+}

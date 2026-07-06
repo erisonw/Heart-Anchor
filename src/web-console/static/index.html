@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cyberboss 控制台</title>
+  <link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-name">Cyberboss</span>
+      <span class="brand-sub">控制台</span>
+      <span id="mode-badge" class="badge">连接中…</span>
+    </div>
+    <div class="topbar-meta">
+      <span id="meta-line"></span>
+      <button id="refresh-btn" class="btn ghost" type="button">刷新</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="overview" type="button">总览</button>
+    <button class="tab" data-tab="session" type="button">会话</button>
+    <button class="tab" data-tab="queue" type="button">消息队列</button>
+    <button class="tab" data-tab="memory" type="button">记忆</button>
+    <button class="tab" data-tab="integrations" type="button">集成</button>
+    <button class="tab" data-tab="android" type="button">Android</button>
+    <button class="tab" data-tab="logs" type="button">日志</button>
+    <button class="tab" data-tab="settings" type="button">设置</button>
+  </nav>
+
+  <main>
+    <section class="panel active" id="panel-overview">
+      <div class="cards" id="overview-cards"></div>
+      <h2>最近的聊天绑定</h2>
+      <div id="overview-bindings" class="list"></div>
+    </section>
+
+    <section class="panel" id="panel-session">
+      <div class="card wide">
+        <h2>当前会话</h2>
+        <div id="session-info" class="kv"></div>
+        <div class="actions">
+          <button id="thread-new-btn" class="btn" type="button">开启新会话</button>
+          <button id="thread-compact-btn" class="btn" type="button">压缩上下文</button>
+        </div>
+        <p class="hint">与聊天里的 /new、/compact 命令等价，直接作用于当前运行中的会话。</p>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-queue">
+      <div class="card wide">
+        <h2>发一条系统消息</h2>
+        <p class="hint">消息会进入系统队列，Agent 在下一轮轮询时收到并决定是否回复到聊天里，可用于测试主动触达链路。</p>
+        <textarea id="system-send-text" rows="3" placeholder="例如：System context: 测试一条系统消息，请简单回应。"></textarea>
+        <div class="actions">
+          <button id="system-send-btn" class="btn" type="button">加入队列</button>
+        </div>
+      </div>
+      <div class="card wide">
+        <h2>待投递系统消息 <span id="queue-count" class="badge"></span></h2>
+        <div id="queue-list" class="list"></div>
+      </div>
+      <div class="card wide">
+        <h2>提醒</h2>
+        <div id="reminder-list" class="list"></div>
+      </div>
+      <div class="card wide">
+        <h2>主动 check-in</h2>
+        <div class="inline-form">
+          <label>间隔
+            <input id="checkin-min" type="number" min="1" style="width:5em" /> ~
+            <input id="checkin-max" type="number" min="1" style="width:5em" /> 分钟
+          </label>
+          <button id="checkin-save-btn" class="btn" type="button">保存</button>
+          <span id="checkin-enabled" class="badge"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-memory">
+      <div class="card wide">
+        <h2>记忆库 <span id="memory-count" class="badge"></span></h2>
+        <div class="inline-form memory-toolbar">
+          <input id="memory-search" type="text" placeholder="搜索记忆内容或标签…" />
+          <select id="memory-status">
+            <option value="confirmed">已确认</option>
+            <option value="candidate">待确认</option>
+            <option value="archived">已归档</option>
+          </select>
+          <button id="memory-refresh-btn" class="btn" type="button">搜索</button>
+          <button id="memory-add-btn" class="btn primary" type="button">新增记忆</button>
+        </div>
+        <div id="memory-add-form" class="memory-form collapsed">
+          <textarea id="memory-new-content" rows="3" placeholder="记忆内容，例如：用户习惯晚上 11 点后不接收非紧急提醒。"></textarea>
+          <div class="inline-form">
+            <label>类型
+              <select id="memory-new-type">
+                <option value="fact">事实 fact</option>
+                <option value="preference">偏好 preference</option>
+                <option value="event">事件 event</option>
+                <option value="relationship">关系 relationship</option>
+              </select>
+            </label>
+            <label>标签 <input id="memory-new-tags" type="text" placeholder="逗号分隔" /></label>
+            <label>重要度
+              <select id="memory-new-importance">
+                <option value="0.9">高</option>
+                <option value="0.5" selected>中</option>
+                <option value="0.2">低</option>
+              </select>
+            </label>
+            <button id="memory-create-btn" class="btn primary" type="button">保存</button>
+            <button id="memory-cancel-btn" class="btn ghost" type="button">取消</button>
+          </div>
+        </div>
+        <div id="memory-list" class="list"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-integrations">
+      <div class="card wide">
+        <h2>服务连接</h2>
+        <p class="hint">这里管理各服务的登录 / 授权状态；具体功能（发邮件、点歌等）通过和 Agent 聊天使用。</p>
+        <div id="integrations-list" class="list"></div>
+      </div>
+      <div class="card wide">
+        <h2>第三方 MCP</h2>
+        <p class="hint">外部 MCP 的鉴权在服务内部完成，这里只显示是否注入；启停在「设置 → MCP 服务」。</p>
+        <div id="integrations-mcp" class="list"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-android">
+      <div class="card wide">
+        <h2>接入状态</h2>
+        <div id="android-status" class="kv"></div>
+      </div>
+      <div class="card wide">
+        <h2>设备</h2>
+        <div id="android-devices" class="list"></div>
+      </div>
+      <div class="card wide">
+        <h2>最近事件</h2>
+        <div id="android-events" class="list"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-logs">
+      <div class="log-toolbar">
+        <label><input type="checkbox" id="log-follow" checked /> 自动滚动</label>
+        <button id="log-clear-btn" class="btn ghost" type="button">清屏</button>
+        <span id="log-status" class="hint"></span>
+      </div>
+      <pre id="log-output" class="log-output"></pre>
+    </section>
+
+    <section class="panel" id="panel-settings">
+      <p class="hint">改动保存到 .env 文件，<strong>重启服务后生效</strong>。只提交有改动的字段，密钥留空表示保持不变。</p>
+      <form id="settings-form">
+        <div id="settings-basic"></div>
+        <details id="settings-advanced-wrap">
+          <summary>高级设置</summary>
+          <p class="hint">渠道接入、视觉、语音、位置等进阶参数，一般不需要改。</p>
+          <div id="settings-advanced"></div>
+        </details>
+        <div class="actions sticky-save">
+          <button id="settings-save-btn" class="btn primary" type="submit">保存改动</button>
+          <span id="settings-dirty" class="hint"></span>
+        </div>
+      </form>
+      <div class="card wide">
+        <h2>MCP 服务</h2>
+        <p class="hint">停用的 MCP server 在重启后不再注入运行时。</p>
+        <div id="mcp-list" class="list"></div>
+      </div>
+      <div class="card wide">
+        <h2>文件位置</h2>
+        <div id="settings-files" class="kv"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

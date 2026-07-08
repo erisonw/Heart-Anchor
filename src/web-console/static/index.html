@@ -81,6 +81,15 @@
 
     <section class="panel" id="panel-memory">
       <div class="card wide">
+        <h2>概况 <span id="memory-embed-badge" class="badge"></span></h2>
+        <div id="memory-stats" class="kv"></div>
+        <div class="actions">
+          <button id="memory-backfill-btn" class="btn" type="button">回填向量</button>
+          <button id="memory-consolidate-btn" class="btn" type="button">立即整理</button>
+          <span class="hint">回填：为存量记忆补语义向量；整理：让 agent 静默去重并提炼候选记忆</span>
+        </div>
+      </div>
+      <div class="card wide">
         <h2>记忆库 <span id="memory-count" class="badge"></span></h2>
         <div class="inline-form memory-toolbar">
           <input id="memory-search" type="text" placeholder="搜索记忆内容或标签…" />
@@ -88,6 +97,14 @@
             <option value="confirmed">已确认</option>
             <option value="candidate">待确认</option>
             <option value="archived">已归档</option>
+          </select>
+          <select id="memory-type-filter">
+            <option value="">全部类型</option>
+            <option value="fact">事实</option>
+            <option value="preference">偏好</option>
+            <option value="event">事件</option>
+            <option value="relationship">关系</option>
+            <option value="vocab">词汇</option>
           </select>
           <button id="memory-refresh-btn" class="btn" type="button">搜索</button>
           <button id="memory-add-btn" class="btn primary" type="button">新增记忆</button>
@@ -101,6 +118,7 @@
                 <option value="preference">偏好 preference</option>
                 <option value="event">事件 event</option>
                 <option value="relationship">关系 relationship</option>
+                <option value="vocab">词汇 vocab</option>
               </select>
             </label>
             <label>标签 <input id="memory-new-tags" type="text" placeholder="逗号分隔" /></label>
@@ -116,6 +134,19 @@
           </div>
         </div>
         <div id="memory-list" class="list"></div>
+      </div>
+      <div class="card wide">
+        <h2>召回调试</h2>
+        <p class="hint">模拟一次记忆召回，查看每条的词法 / 语义 / 时间衰减打分。不影响使用统计。</p>
+        <div class="inline-form memory-toolbar">
+          <input id="memory-debug-query" type="text" placeholder="输入一句话测试召回，例如：明天喝什么咖啡" />
+          <button id="memory-debug-btn" class="btn" type="button">测试召回</button>
+        </div>
+        <div id="memory-debug-result" class="list"></div>
+      </div>
+      <div class="card wide">
+        <h2>相似记忆（去重审阅） <button id="memory-similar-btn" class="btn ghost" type="button">扫描</button></h2>
+        <div id="memory-similar-list" class="list"></div>
       </div>
     </section>
 

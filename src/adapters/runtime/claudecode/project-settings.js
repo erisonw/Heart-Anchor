@@ -9,11 +9,14 @@ function ensureClaudeProjectMcpConfig({ workspaceRoot, cyberbossHome = "" } = {}
 
   const configPath = path.join(normalizedWorkspaceRoot, ".mcp.json");
   const current = readJsonObject(configPath);
+  const currentServers = current.mcpServers && typeof current.mcpServers === "object" ? { ...current.mcpServers } : {};
+  // 服务改名后清掉旧键，避免同一工具集被注入两份
+  delete currentServers.cyberboss_tools;
   const next = {
     ...current,
     mcpServers: {
-      ...(current.mcpServers && typeof current.mcpServers === "object" ? current.mcpServers : {}),
-      cyberboss_tools: buildClaudeProjectMcpServerConfig({
+      ...currentServers,
+      heart_anchor_tools: buildClaudeProjectMcpServerConfig({
         workspaceRoot: normalizedWorkspaceRoot,
         cyberbossHome,
       }),
@@ -26,7 +29,7 @@ function ensureClaudeProjectMcpConfig({ workspaceRoot, cyberbossHome = "" } = {}
 
   return {
     configPath,
-    serverName: "cyberboss_tools",
+    serverName: "heart_anchor_tools",
     config: next,
   };
 }

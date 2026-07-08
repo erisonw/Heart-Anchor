@@ -2,6 +2,11 @@ const fs = require("fs");
 
 const { CheckinConfigStore } = require("../core/checkin-config-store");
 const { normalizeText } = require("../core/values");
+const {
+  buildConsolidationTrigger,
+  readConsolidationStatus,
+  writeConsolidationStatus,
+} = require("../services/memory-consolidation-prompt");
 const { readCurrentThreadState, MCP_CONFIG_FILE } = require("./state");
 
 function requireApp(app) {
@@ -85,8 +90,8 @@ function toggleMcpServer(payload) {
   if (!name) {
     throw new HttpError(400, "缺少 MCP server 名称。");
   }
-  if (name === "cyberboss_tools") {
-    throw new HttpError(400, "cyberboss_tools 是核心工具，不能停用。");
+  if (name === "heart_anchor_tools" || name === "cyberboss_tools") {
+    throw new HttpError(400, `${name} 是核心工具，不能停用。`);
   }
   const parsed = readJsonFile(MCP_CONFIG_FILE, {});
   const active = parsed.mcpServers && typeof parsed.mcpServers === "object" ? { ...parsed.mcpServers } : {};
@@ -122,21 +127,29 @@ function getMemoryService(app) {
   return service;
 }
 
-function memoryQuery({ app }, params = {}) {
+async function memoryQuery({ app }, params = {}) {
   const service = getMemoryService(app);
   const status = normalizeText(params.status) || "confirmed";
   const query = normalizeText(params.query);
+  const type = normalizeText(params.type);
+  // 浏览器里的搜索走混合召回，但不计入使用统计。
   const items = query
-    ? service.search({ query, status, limit: 50 })
-    : service.list({ status, limit: 100 });
-  return { items, status, query };
+    ? await service.searchRanked({ query, status, type, limit: 50, markUsed: false })
+    : service.list({ status, type, limit: 100 });
+  return { items, status, query, type };
 }
 
-function memoryCreate({ app }, payload = {}) {
+async function memoryCreate({ app }, payload = {}) {
   const service = getMemoryService(app);
   const content = normalizeText(payload.content);
   if (!content) {
     throw new HttpError(400, "记忆内容不能为空。");
+  }
+  let similar = [];
+  try {
+    similar = await service.findSimilar({ content });
+  } catch {
+    similar = [];
   }
   const created = service.remember({
     content,
@@ -145,7 +158,84 @@ function memoryCreate({ app }, payload = {}) {
     importance: payload.importance,
     source: "web-console",
   });
-  return { message: "记忆已保存。", memory: created };
+  const message = similar.length
+    ? `记忆已保存。注意：与已有记忆相似（${similar[0].score}）："${String(similar[0].memory?.content || "").slice(0, 40)}…"`
+    : "记忆已保存。";
+  return { message, memory: created, similar };
+}
+
+function memoryStats({ app, config }) {
+  return {
+    ...getMemoryService(app).stats(),
+    consolidation: {
+      enabled: Boolean(config?.startWithMemoryConsolidation),
+      time: normalizeText(config?.memoryConsolidationTime),
+      ...readConsolidationStatus(config),
+    },
+  };
+}
+
+// 手动触发一次夜间整理（同一触发体，走 system queue，下轮轮询投递）。
+function memoryConsolidate({ app, config }) {
+  const service = getMemoryService(app);
+  const systemService = app.projectServices?.system;
+  if (!systemService || typeof systemService.queueMessage !== "function") {
+    throw new HttpError(500, "system message service 不可用。");
+  }
+  const queued = systemService.queueMessage({
+    text: buildConsolidationTrigger({ config, memoryService: service }),
+  });
+  writeConsolidationStatus(config, {
+    lastQueuedAt: new Date().toISOString(),
+    lastQueueId: normalizeText(queued?.id),
+    source: "web-console",
+  });
+  return { message: "整理任务已入队，agent 将在下一轮静默执行。", id: normalizeText(queued?.id) };
+}
+
+async function memoryDebugRecall({ app }, params = {}) {
+  const service = getMemoryService(app);
+  const query = normalizeText(params.query);
+  if (!query) {
+    throw new HttpError(400, "请输入要调试的查询文本。");
+  }
+  const items = await service.searchRanked({
+    query,
+    status: normalizeText(params.status) || "confirmed",
+    limit: 10,
+    explain: true,
+    markUsed: false,
+  });
+  return {
+    query,
+    items: items.map(({ memory, factors }) => ({
+      id: memory.id,
+      content: memory.content,
+      tags: memory.tags,
+      factors,
+    })),
+  };
+}
+
+function memorySimilarPairs({ app }) {
+  return { pairs: getMemoryService(app).similarPairs({ limit: 20 }) };
+}
+
+// 回填可能耗时，启动后立即返回状态，前端轮询 stats 看进度。
+function memoryBackfill({ app }) {
+  const service = getMemoryService(app);
+  const status = service.embeddingStatus();
+  if (!status.enabled) {
+    throw new HttpError(400, "embedding 未配置，请先设置 HEART_ANCHOR_MEMORY_EMBEDDING_* 参数并重启。");
+  }
+  if (status.running) {
+    return { message: "回填已在进行中。", ...status };
+  }
+  void service.backfillEmbeddings().catch((error) => {
+    const message = error instanceof Error ? error.message : String(error || "unknown error");
+    console.warn(`[heart-anchor] memory embedding backfill failed: ${message}`);
+  });
+  return { message: "回填已启动，进度见概况区。", ...status, running: true };
 }
 
 function memoryUpdate({ app }, payload = {}) {
@@ -355,6 +445,11 @@ module.exports = {
   memoryCreate,
   memoryUpdate,
   memoryForget,
+  memoryStats,
+  memoryDebugRecall,
+  memorySimilarPairs,
+  memoryBackfill,
+  memoryConsolidate,
   integrationsStatus,
   googleAuthUrl,
   googleExchange,

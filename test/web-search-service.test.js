@@ -168,6 +168,126 @@ test("web search service queries Tavily and returns compact results", async () =
   ]);
 });
 
+test("web search service queries Bocha and returns compact results", async () => {
+  const requests = [];
+  const service = new WebSearchService({
+    config: {
+      webSearchProvider: "bocha",
+      bochaApiKey: "bocha-key",
+      webSearchTimeoutMs: 2500,
+    },
+    fetchImpl: async (url, options) => {
+      requests.push({ url: String(url), options });
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return {
+            data: {
+              webPages: {
+                value: [
+                  {
+                    name: "第一条博查结果",
+                    url: "https://example.cn/a",
+                    summary: "适合模型直接阅读的长摘要",
+                    snippet: "普通摘要",
+                    siteName: "示例站",
+                    datePublished: "2026-07-07T09:30:00+08:00",
+                  },
+                  {
+                    name: "第二条博查结果",
+                    url: "https://example.cn/b",
+                    snippet: "第二条摘要",
+                  },
+                ],
+              },
+            },
+          };
+        },
+      };
+    },
+  });
+
+  const result = await service.search({
+    query: "尊嘟假嘟 是什么梗",
+    count: 99,
+    timeRange: "week",
+  });
+
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, "https://api.bochaai.com/v1/web-search");
+  assert.equal(requests[0].options.method, "POST");
+  assert.equal(requests[0].options.headers.Authorization, "Bearer bocha-key");
+  assert.equal(requests[0].options.headers["Content-Type"], "application/json");
+  assert.deepEqual(JSON.parse(requests[0].options.body), {
+    query: "尊嘟假嘟 是什么梗",
+    freshness: "oneWeek",
+    summary: true,
+    count: 10,
+  });
+  assert.equal(result.provider, "bocha");
+  assert.equal(result.query, "尊嘟假嘟 是什么梗");
+  assert.deepEqual(result.results, [
+    {
+      title: "第一条博查结果",
+      url: "https://example.cn/a",
+      snippet: "适合模型直接阅读的长摘要",
+      source: "示例站",
+      publishedAt: "2026-07-07T09:30:00+08:00",
+    },
+    {
+      title: "第二条博查结果",
+      url: "https://example.cn/b",
+      snippet: "第二条摘要",
+      source: "example.cn",
+      publishedAt: "",
+    },
+  ]);
+});
+
+test("web search service defaults to Bocha when only Bocha key is configured", async () => {
+  const service = new WebSearchService({
+    config: {
+      bochaApiKey: "bocha-key",
+    },
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return { webPages: { value: [] } };
+      },
+    }),
+  });
+
+  const result = await service.search({ query: "尊嘟假嘟 是什么梗" });
+
+  assert.equal(result.provider, "bocha");
+});
+
+test("web search service uses noLimit freshness by default for Bocha", async () => {
+  const requests = [];
+  const service = new WebSearchService({
+    config: {
+      webSearchProvider: "bocha",
+      bochaApiKey: "bocha-key",
+    },
+    fetchImpl: async (url, options) => {
+      requests.push({ url: String(url), options });
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return { data: { webPages: { value: [] } } };
+        },
+      };
+    },
+  });
+
+  await service.search({ query: "尊嘟假嘟 是什么梗" });
+
+  assert.equal(JSON.parse(requests[0].options.body).freshness, "noLimit");
+});
+
 test("web search service requires a Tavily API key when Tavily is selected", async () => {
   const service = new WebSearchService({
     config: {
@@ -181,4 +301,19 @@ test("web search service requires a Tavily API key when Tavily is selected", asy
   await assert.rejects(async () => {
     await service.search({ query: "Claude Code MCP" });
   }, /CYBERBOSS_TAVILY_API_KEY/);
+});
+
+test("web search service requires a Bocha API key when Bocha is selected", async () => {
+  const service = new WebSearchService({
+    config: {
+      webSearchProvider: "bocha",
+    },
+    fetchImpl: async () => {
+      throw new Error("should not fetch without key");
+    },
+  });
+
+  await assert.rejects(async () => {
+    await service.search({ query: "尊嘟假嘟 是什么梗" });
+  }, /HEART_ANCHOR_BOCHA_API_KEY/);
 });

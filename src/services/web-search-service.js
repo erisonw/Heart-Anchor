@@ -3,6 +3,7 @@ const DEFAULT_COUNT = 5;
 const MAX_COUNT = 10;
 const BRAVE_WEB_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search";
 const TAVILY_SEARCH_URL = "https://api.tavily.com/search";
+const BOCHA_WEB_SEARCH_URL = "https://api.bochaai.com/v1/web-search";
 
 class WebSearchService {
   constructor({ config = {}, fetchImpl = globalThis.fetch } = {}) {
@@ -38,6 +39,14 @@ class WebSearchService {
         timeRange,
         includeDomains,
         excludeDomains,
+      });
+    }
+    if (provider === "bocha") {
+      return this.searchBocha({
+        query: normalizedQuery,
+        count,
+        freshness,
+        timeRange,
       });
     }
     if (provider !== "brave") {
@@ -176,6 +185,62 @@ class WebSearchService {
       clearTimeout(timer);
     }
   }
+
+  async searchBocha({
+    query,
+    count,
+    freshness,
+    timeRange,
+  }) {
+    const apiKey = normalizeText(this.config.bochaApiKey);
+    if (!apiKey) {
+      throw new Error("Web search is not configured. Set HEART_ANCHOR_BOCHA_API_KEY on the server.");
+    }
+    if (typeof this.fetchImpl !== "function") {
+      throw new Error("Web search requires fetch support in this Node.js runtime.");
+    }
+
+    const limit = clampInteger(count, DEFAULT_COUNT, 1, MAX_COUNT);
+    const body = compactObject({
+      query,
+      freshness: normalizeBochaFreshness(freshness || timeRange),
+      summary: true,
+      count: limit,
+    });
+
+    const timeoutMs = clampInteger(this.config.webSearchTimeoutMs, DEFAULT_TIMEOUT_MS, 1_000, 60_000);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await this.fetchImpl(BOCHA_WEB_SEARCH_URL, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      if (!response?.ok) {
+        const responseBody = await safeReadResponseText(response);
+        throw new Error(`Bocha Search request failed (${response?.status || "unknown"}): ${truncateText(responseBody, 300)}`);
+      }
+      const payload = await response.json();
+      return {
+        provider: "bocha",
+        query,
+        results: normalizeBochaResults(payload).slice(0, limit),
+      };
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        throw new Error(`Bocha Search request timed out after ${timeoutMs}ms.`);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
 }
 
 function normalizeBraveResults(payload) {
@@ -222,10 +287,38 @@ function normalizeTavilyResults(payload) {
     .filter(Boolean);
 }
 
+function normalizeBochaResults(payload) {
+  const results = Array.isArray(payload?.data?.webPages?.value)
+    ? payload.data.webPages.value
+    : Array.isArray(payload?.webPages?.value)
+      ? payload.webPages.value
+      : [];
+  return results
+    .map((item) => {
+      const title = normalizeText(item?.name);
+      const url = normalizeText(item?.url);
+      if (!title || !url) {
+        return null;
+      }
+      const snippet = normalizeText(item?.summary) || normalizeText(item?.snippet);
+      return {
+        title: truncateText(title, 160),
+        url,
+        snippet: truncateText(snippet, 320),
+        source: normalizeText(item?.siteName) || hostnameFromUrl(url),
+        publishedAt: normalizeText(item?.datePublished),
+      };
+    })
+    .filter(Boolean);
+}
+
 function normalizeProvider(value, config = {}) {
   const normalized = normalizeText(value).toLowerCase();
   if (normalized) {
     return normalized;
+  }
+  if (!normalizeText(config.braveSearchApiKey) && normalizeText(config.bochaApiKey)) {
+    return "bocha";
   }
   if (!normalizeText(config.braveSearchApiKey) && normalizeText(config.tavilySearchApiKey)) {
     return "tavily";
@@ -252,6 +345,21 @@ function normalizeTavilyTimeRange(value) {
     return normalized;
   }
   return "";
+}
+
+function normalizeBochaFreshness(value) {
+  const normalized = normalizeText(value);
+  if (["noLimit", "oneDay", "oneWeek", "oneMonth", "oneYear"].includes(normalized)) {
+    return normalized;
+  }
+  const lower = normalized.toLowerCase();
+  const aliases = {
+    day: "oneDay",
+    week: "oneWeek",
+    month: "oneMonth",
+    year: "oneYear",
+  };
+  return aliases[lower] || "noLimit";
 }
 
 function normalizeStringArray(value) {

@@ -277,6 +277,9 @@ function createHost() {
         },
       },
       memory: {
+        async searchRanked(args) {
+          return this.search(args);
+        },
         search(args) {
           return [{
             id: "mem_001",
@@ -569,7 +572,7 @@ function createHost() {
 test("tool host rejects legacy timeline write CLI-shaped fields", async () => {
   const host = createHost();
   await assert.rejects(async () => {
-    await host.invokeTool("cyberboss_timeline_write", {
+    await host.invokeTool("heart_anchor_timeline_write", {
       date: "2026-04-21",
       events: [],
       eventsJson: "{\"events\":[]}",
@@ -579,11 +582,11 @@ test("tool host rejects legacy timeline write CLI-shaped fields", async () => {
 
 test("tool host exposes structured timeline read tools", async () => {
   const host = createHost();
-  const readResult = await host.invokeTool("cyberboss_timeline_read", {
+  const readResult = await host.invokeTool("heart_anchor_timeline_read", {
     date: "2026-04-21",
   }, {});
-  const categoriesResult = await host.invokeTool("cyberboss_timeline_categories", {}, {});
-  const proposalsResult = await host.invokeTool("cyberboss_timeline_proposals", {
+  const categoriesResult = await host.invokeTool("heart_anchor_timeline_categories", {}, {});
+  const proposalsResult = await host.invokeTool("heart_anchor_timeline_proposals", {
     date: "2026-04-21",
   }, {});
 
@@ -594,8 +597,8 @@ test("tool host exposes structured timeline read tools", async () => {
 
 test("tool host exposes compact web search", async () => {
   const host = createHost();
-  const tool = host.listTools().find((candidate) => candidate.name === "cyberboss_web_search");
-  const result = await host.invokeTool("cyberboss_web_search", {
+  const tool = host.listTools().find((candidate) => candidate.name === "heart_anchor_web_search");
+  const result = await host.invokeTool("heart_anchor_web_search", {
     query: "Claude Code MCP web search",
     count: 3,
     searchDepth: "basic",
@@ -610,8 +613,8 @@ test("tool host exposes compact web search", async () => {
 
 test("tool host exposes trending topics with optional platform filters", async () => {
   const host = createHost();
-  const tool = host.listTools().find((candidate) => candidate.name === "cyberboss_trending");
-  const result = await host.invokeTool("cyberboss_trending", {
+  const tool = host.listTools().find((candidate) => candidate.name === "heart_anchor_trending");
+  const result = await host.invokeTool("heart_anchor_trending", {
     platforms: ["weibo"],
   }, {});
 
@@ -624,8 +627,8 @@ test("tool host exposes trending topics with optional platform filters", async (
 
 test("tool host exposes calendar upcoming events", async () => {
   const host = createHost();
-  const tool = host.listTools().find((candidate) => candidate.name === "cyberboss_calendar_upcoming");
-  const result = await host.invokeTool("cyberboss_calendar_upcoming", {
+  const tool = host.listTools().find((candidate) => candidate.name === "heart_anchor_calendar_upcoming");
+  const result = await host.invokeTool("heart_anchor_calendar_upcoming", {
     hours: 168,
     limit: 5,
     refresh: true,
@@ -641,35 +644,35 @@ test("tool host exposes calendar upcoming events", async () => {
 test("tool host exposes Google Calendar OAuth and event tools", async () => {
   const host = createHost();
   const tools = host.listTools();
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_calendar_auth_status"));
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_calendar_auth_url"));
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_calendar_auth_exchange"));
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_calendar_list"));
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_calendar_create"));
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_calendar_update"));
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_calendar_delete"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_calendar_auth_status"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_calendar_auth_url"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_calendar_auth_exchange"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_calendar_list"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_calendar_create"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_calendar_update"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_calendar_delete"));
 
-  const status = await host.invokeTool("cyberboss_google_calendar_auth_status", {}, {});
-  const authUrl = await host.invokeTool("cyberboss_google_calendar_auth_url", { state: "setup" }, {});
-  const exchanged = await host.invokeTool("cyberboss_google_calendar_auth_exchange", { code: "abcd-1234" }, {});
-  const listed = await host.invokeTool("cyberboss_google_calendar_list", {
+  const status = await host.invokeTool("heart_anchor_google_calendar_auth_status", {}, {});
+  const authUrl = await host.invokeTool("heart_anchor_google_calendar_auth_url", { state: "setup" }, {});
+  const exchanged = await host.invokeTool("heart_anchor_google_calendar_auth_exchange", { code: "abcd-1234" }, {});
+  const listed = await host.invokeTool("heart_anchor_google_calendar_list", {
     timeMin: "2026-06-27T00:00:00+08:00",
     limit: 3,
   }, {});
-  const created = await host.invokeTool("cyberboss_google_calendar_create", {
+  const created = await host.invokeTool("heart_anchor_google_calendar_create", {
     summary: "复习数据库",
     start: "2026-06-27T15:00:00+08:00",
     end: "2026-06-27T16:00:00+08:00",
     confirmed: true,
   }, {});
-  const updated = await host.invokeTool("cyberboss_google_calendar_update", {
+  const updated = await host.invokeTool("heart_anchor_google_calendar_update", {
     eventId: "google-event-1",
     summary: "数据库复习改期",
     start: "2026-06-27T16:00:00+08:00",
     end: "2026-06-27T17:00:00+08:00",
     confirmed: true,
   }, {});
-  const deleted = await host.invokeTool("cyberboss_google_calendar_delete", {
+  const deleted = await host.invokeTool("heart_anchor_google_calendar_delete", {
     eventId: "google-event-1",
     confirmed: true,
   }, {});
@@ -687,24 +690,24 @@ test("tool host exposes Google Calendar OAuth and event tools", async () => {
 test("tool host exposes Google Gmail OAuth and read-only mailbox tools", async () => {
   const host = createHost();
   const tools = host.listTools();
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_gmail_auth_status"));
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_gmail_auth_url"));
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_gmail_auth_exchange"));
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_gmail_profile"));
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_gmail_labels"));
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_gmail_search"));
-  assert.ok(tools.find((candidate) => candidate.name === "cyberboss_google_gmail_read"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_gmail_auth_status"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_gmail_auth_url"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_gmail_auth_exchange"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_gmail_profile"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_gmail_labels"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_gmail_search"));
+  assert.ok(tools.find((candidate) => candidate.name === "heart_anchor_google_gmail_read"));
 
-  const status = await host.invokeTool("cyberboss_google_gmail_auth_status", {}, {});
-  const authUrl = await host.invokeTool("cyberboss_google_gmail_auth_url", { state: "setup" }, {});
-  const exchanged = await host.invokeTool("cyberboss_google_gmail_auth_exchange", { code: "gmail-code-1234" }, {});
-  const profile = await host.invokeTool("cyberboss_google_gmail_profile", {}, {});
-  const labels = await host.invokeTool("cyberboss_google_gmail_labels", {}, {});
-  const searched = await host.invokeTool("cyberboss_google_gmail_search", {
+  const status = await host.invokeTool("heart_anchor_google_gmail_auth_status", {}, {});
+  const authUrl = await host.invokeTool("heart_anchor_google_gmail_auth_url", { state: "setup" }, {});
+  const exchanged = await host.invokeTool("heart_anchor_google_gmail_auth_exchange", { code: "gmail-code-1234" }, {});
+  const profile = await host.invokeTool("heart_anchor_google_gmail_profile", {}, {});
+  const labels = await host.invokeTool("heart_anchor_google_gmail_labels", {}, {});
+  const searched = await host.invokeTool("heart_anchor_google_gmail_search", {
     query: "from:school@example.com newer_than:7d",
     limit: 5,
   }, {});
-  const read = await host.invokeTool("cyberboss_google_gmail_read", {
+  const read = await host.invokeTool("heart_anchor_google_gmail_read", {
     messageId: "gmail-message-1",
   }, {});
 
@@ -723,43 +726,43 @@ test("tool host exposes confirmed Google Gmail write tools", async () => {
   const host = createHost();
   const names = host.listTools().map((tool) => tool.name);
 
-  assert.ok(names.includes("cyberboss_google_gmail_send"));
-  assert.ok(names.includes("cyberboss_google_gmail_draft_create"));
-  assert.ok(names.includes("cyberboss_google_gmail_mark_read"));
-  assert.ok(names.includes("cyberboss_google_gmail_mark_unread"));
-  assert.ok(names.includes("cyberboss_google_gmail_archive"));
-  assert.ok(names.includes("cyberboss_google_gmail_trash"));
-  assert.ok(names.includes("cyberboss_google_gmail_modify_labels"));
+  assert.ok(names.includes("heart_anchor_google_gmail_send"));
+  assert.ok(names.includes("heart_anchor_google_gmail_draft_create"));
+  assert.ok(names.includes("heart_anchor_google_gmail_mark_read"));
+  assert.ok(names.includes("heart_anchor_google_gmail_mark_unread"));
+  assert.ok(names.includes("heart_anchor_google_gmail_archive"));
+  assert.ok(names.includes("heart_anchor_google_gmail_trash"));
+  assert.ok(names.includes("heart_anchor_google_gmail_modify_labels"));
 
-  const sent = await host.invokeTool("cyberboss_google_gmail_send", {
+  const sent = await host.invokeTool("heart_anchor_google_gmail_send", {
     to: ["friend@example.com"],
     subject: "Hello",
     text: "Hi",
     confirmed: true,
   }, {});
-  const draft = await host.invokeTool("cyberboss_google_gmail_draft_create", {
+  const draft = await host.invokeTool("heart_anchor_google_gmail_draft_create", {
     to: ["friend@example.com"],
     subject: "Draft",
     text: "Draft body",
     confirmed: true,
   }, {});
-  const read = await host.invokeTool("cyberboss_google_gmail_mark_read", {
+  const read = await host.invokeTool("heart_anchor_google_gmail_mark_read", {
     messageId: "gmail-message-1",
     confirmed: true,
   }, {});
-  const unread = await host.invokeTool("cyberboss_google_gmail_mark_unread", {
+  const unread = await host.invokeTool("heart_anchor_google_gmail_mark_unread", {
     messageId: "gmail-message-1",
     confirmed: true,
   }, {});
-  const archived = await host.invokeTool("cyberboss_google_gmail_archive", {
+  const archived = await host.invokeTool("heart_anchor_google_gmail_archive", {
     messageId: "gmail-message-1",
     confirmed: true,
   }, {});
-  const trashed = await host.invokeTool("cyberboss_google_gmail_trash", {
+  const trashed = await host.invokeTool("heart_anchor_google_gmail_trash", {
     messageId: "gmail-message-1",
     confirmed: true,
   }, {});
-  const labeled = await host.invokeTool("cyberboss_google_gmail_modify_labels", {
+  const labeled = await host.invokeTool("heart_anchor_google_gmail_modify_labels", {
     messageId: "gmail-message-1",
     addLabelIds: ["Label_1"],
     removeLabelIds: ["Label_2"],
@@ -778,7 +781,7 @@ test("tool host exposes confirmed Google Gmail write tools", async () => {
 test("tool host rejects unconfirmed Google Gmail write tools", async () => {
   const host = createHost();
   await assert.rejects(async () => {
-    await host.invokeTool("cyberboss_google_gmail_send", {
+    await host.invokeTool("heart_anchor_google_gmail_send", {
       to: ["friend@example.com"],
       subject: "Hello",
       text: "Hi",
@@ -786,7 +789,7 @@ test("tool host rejects unconfirmed Google Gmail write tools", async () => {
     }, {});
   }, /input\.confirmed must be true/);
   await assert.rejects(async () => {
-    await host.invokeTool("cyberboss_google_gmail_trash", {
+    await host.invokeTool("heart_anchor_google_gmail_trash", {
       messageId: "gmail-message-1",
       confirmed: false,
     }, {});
@@ -797,11 +800,11 @@ test("tool host exposes confirmed Android alarm and timer tools", async () => {
   const host = createHost();
   const names = host.listTools().map((tool) => tool.name);
 
-  assert.ok(names.includes("cyberboss_android_alarm_set"));
-  assert.ok(names.includes("cyberboss_android_timer_set"));
-  assert.ok(names.includes("cyberboss_android_command_status"));
+  assert.ok(names.includes("heart_anchor_android_alarm_set"));
+  assert.ok(names.includes("heart_anchor_android_timer_set"));
+  assert.ok(names.includes("heart_anchor_android_command_status"));
 
-  const alarm = await host.invokeTool("cyberboss_android_alarm_set", {
+  const alarm = await host.invokeTool("heart_anchor_android_alarm_set", {
     deviceId: "phone-main",
     hour: 7,
     minute: 30,
@@ -809,14 +812,14 @@ test("tool host exposes confirmed Android alarm and timer tools", async () => {
     skipUi: true,
     confirmed: true,
   }, {});
-  const timer = await host.invokeTool("cyberboss_android_timer_set", {
+  const timer = await host.invokeTool("heart_anchor_android_timer_set", {
     deviceId: "phone-main",
     durationSeconds: 600,
     label: "泡茶",
     skipUi: true,
     confirmed: true,
   }, {});
-  const status = await host.invokeTool("cyberboss_android_command_status", {
+  const status = await host.invokeTool("heart_anchor_android_command_status", {
     deviceId: "phone-main",
     status: "queued",
   }, {});
@@ -831,14 +834,14 @@ test("tool host exposes confirmed Android alarm and timer tools", async () => {
 test("tool host rejects unconfirmed Android alarm and timer tools", async () => {
   const host = createHost();
   await assert.rejects(async () => {
-    await host.invokeTool("cyberboss_android_alarm_set", {
+    await host.invokeTool("heart_anchor_android_alarm_set", {
       hour: 7,
       minute: 30,
       confirmed: false,
     }, {});
   }, /input\.confirmed must be true/);
   await assert.rejects(async () => {
-    await host.invokeTool("cyberboss_android_timer_set", {
+    await host.invokeTool("heart_anchor_android_timer_set", {
       durationSeconds: 300,
       confirmed: false,
     }, {});
@@ -850,33 +853,33 @@ test("tool host exposes long-term memory tools", async () => {
   const tools = host.listTools();
   const names = tools.map((tool) => tool.name);
 
-  assert.ok(names.includes("cyberboss_memory_search"));
-  assert.ok(names.includes("cyberboss_memory_remember"));
-  assert.ok(names.includes("cyberboss_memory_propose"));
-  assert.ok(names.includes("cyberboss_memory_list"));
-  assert.ok(names.includes("cyberboss_memory_update"));
-  assert.ok(names.includes("cyberboss_memory_forget"));
+  assert.ok(names.includes("heart_anchor_memory_search"));
+  assert.ok(names.includes("heart_anchor_memory_remember"));
+  assert.ok(names.includes("heart_anchor_memory_propose"));
+  assert.ok(names.includes("heart_anchor_memory_list"));
+  assert.ok(names.includes("heart_anchor_memory_update"));
+  assert.ok(names.includes("heart_anchor_memory_forget"));
 
-  const searched = await host.invokeTool("cyberboss_memory_search", {
+  const searched = await host.invokeTool("heart_anchor_memory_search", {
     query: "怕冷 空调",
   }, {});
-  const remembered = await host.invokeTool("cyberboss_memory_remember", {
+  const remembered = await host.invokeTool("heart_anchor_memory_remember", {
     content: "浩浩喜欢短句回复。",
     type: "preference",
     tags: ["聊天"],
     importance: 0.8,
   }, {});
-  const proposed = await host.invokeTool("cyberboss_memory_propose", {
+  const proposed = await host.invokeTool("heart_anchor_memory_propose", {
     content: "浩浩今晚有点感冒。",
   }, {});
-  const listed = await host.invokeTool("cyberboss_memory_list", {
+  const listed = await host.invokeTool("heart_anchor_memory_list", {
     status: "candidate",
   }, {});
-  const updated = await host.invokeTool("cyberboss_memory_update", {
+  const updated = await host.invokeTool("heart_anchor_memory_update", {
     id: "mem_003",
     status: "confirmed",
   }, {});
-  const forgotten = await host.invokeTool("cyberboss_memory_forget", {
+  const forgotten = await host.invokeTool("heart_anchor_memory_forget", {
     id: "mem_003",
   }, {});
 
@@ -896,7 +899,7 @@ test("tool host exposes long-term memory tools", async () => {
 test("tool host validates required memory content", async () => {
   const host = createHost();
   await assert.rejects(async () => {
-    await host.invokeTool("cyberboss_memory_remember", {
+    await host.invokeTool("heart_anchor_memory_remember", {
       tags: ["empty"],
     }, {});
   }, /input\.content is required/);
@@ -905,7 +908,7 @@ test("tool host validates required memory content", async () => {
 test("tool host rejects unconfirmed Google Calendar event creation", async () => {
   const host = createHost();
   await assert.rejects(async () => {
-    await host.invokeTool("cyberboss_google_calendar_create", {
+    await host.invokeTool("heart_anchor_google_calendar_create", {
       summary: "复习数据库",
       start: "2026-06-27T15:00:00+08:00",
       end: "2026-06-27T16:00:00+08:00",
@@ -917,14 +920,14 @@ test("tool host rejects unconfirmed Google Calendar event creation", async () =>
 test("tool host rejects unconfirmed Google Calendar event update and delete", async () => {
   const host = createHost();
   await assert.rejects(async () => {
-    await host.invokeTool("cyberboss_google_calendar_update", {
+    await host.invokeTool("heart_anchor_google_calendar_update", {
       eventId: "google-event-1",
       summary: "数据库复习改期",
       confirmed: false,
     }, {});
   }, /input\.confirmed must be true/);
   await assert.rejects(async () => {
-    await host.invokeTool("cyberboss_google_calendar_delete", {
+    await host.invokeTool("heart_anchor_google_calendar_delete", {
       eventId: "google-event-1",
       confirmed: false,
     }, {});
@@ -949,8 +952,8 @@ test("tool host exposes netease music tools from the extra host", async () => {
 
 test("tool host exposes channel voice sending", async () => {
   const host = createHost();
-  const tool = host.listTools().find((candidate) => candidate.name === "cyberboss_channel_send_voice");
-  const result = await host.invokeTool("cyberboss_channel_send_voice", {
+  const tool = host.listTools().find((candidate) => candidate.name === "heart_anchor_channel_send_voice");
+  const result = await host.invokeTool("heart_anchor_channel_send_voice", {
     filePath: "/tmp/hello.silk",
     playtimeMs: 2345,
     text: "你好呀",
@@ -966,8 +969,8 @@ test("tool host exposes channel voice sending", async () => {
 
 test("tool host exposes text-to-voice sending", async () => {
   const host = createHost();
-  const tool = host.listTools().find((candidate) => candidate.name === "cyberboss_channel_speak");
-  const result = await host.invokeTool("cyberboss_channel_speak", {
+  const tool = host.listTools().find((candidate) => candidate.name === "heart_anchor_channel_speak");
+  const result = await host.invokeTool("heart_anchor_channel_speak", {
     text: "起床啦",
     voiceId: "voice-2",
   }, {});
@@ -985,7 +988,7 @@ test("tool host exposes text-to-voice sending", async () => {
 
 test("tool host lets text-to-voice callers request audio delivery", async () => {
   const host = createHost();
-  const result = await host.invokeTool("cyberboss_channel_speak", {
+  const result = await host.invokeTool("heart_anchor_channel_speak", {
     text: "发原音频我听听",
     deliveryMode: "audio",
   }, {});
@@ -996,7 +999,7 @@ test("tool host lets text-to-voice callers request audio delivery", async () => 
 test("tool host validates structured reminder input types", async () => {
   const host = createHost();
   await assert.rejects(async () => {
-    await host.invokeTool("cyberboss_reminder_create", {
+    await host.invokeTool("heart_anchor_reminder_create", {
       text: "ping me",
       delayMinutes: "30",
     }, {});
@@ -1005,32 +1008,32 @@ test("tool host validates structured reminder input types", async () => {
 
 test("tool host exposes sticker tools with compact structured outputs", async () => {
   const host = createHost();
-  const tagsResult = await host.invokeTool("cyberboss_sticker_tags", {}, {});
-  const pickResult = await host.invokeTool("cyberboss_sticker_pick", {
+  const tagsResult = await host.invokeTool("heart_anchor_sticker_tags", {}, {});
+  const pickResult = await host.invokeTool("heart_anchor_sticker_pick", {
     tag: "可爱",
     limit: 3,
   }, {});
-  const sendResult = await host.invokeTool("cyberboss_sticker_send", {
+  const sendResult = await host.invokeTool("heart_anchor_sticker_send", {
     stickerId: "stk_001",
   }, {});
-  const deleteResult = await host.invokeTool("cyberboss_sticker_delete", {
+  const deleteResult = await host.invokeTool("heart_anchor_sticker_delete", {
     items: [{ stickerId: "stk_001" }],
   }, {});
-  const saveResult = await host.invokeTool("cyberboss_sticker_save_from_inbox", {
+  const saveResult = await host.invokeTool("heart_anchor_sticker_save_from_inbox", {
     items: [{
       filePath: "/tmp/inbox/cat.png",
       tags: ["可爱"],
       desc: "小猫歪头卖萌",
     }],
   }, {});
-  const duplicateSaveResult = await host.invokeTool("cyberboss_sticker_save_from_inbox", {
+  const duplicateSaveResult = await host.invokeTool("heart_anchor_sticker_save_from_inbox", {
     items: [{
       filePath: "/tmp/inbox/cat.png",
       tags: ["可爱"],
       desc: "重复",
     }],
   }, {});
-  const updateResult = await host.invokeTool("cyberboss_sticker_update", {
+  const updateResult = await host.invokeTool("heart_anchor_sticker_update", {
     items: [{
       stickerId: "stk_001",
       tags: ["可爱", "新标签"],
@@ -1051,7 +1054,7 @@ test("tool host exposes sticker tools with compact structured outputs", async ()
 
 test("tool host accepts structured timeline screenshot input", async () => {
   const host = createHost();
-  const result = await host.invokeTool("cyberboss_timeline_screenshot", {
+  const result = await host.invokeTool("heart_anchor_timeline_screenshot", {
     selector: "timeline",
     range: "day",
     date: "2026-04-21",
@@ -1063,7 +1066,7 @@ test("tool host accepts structured timeline screenshot input", async () => {
 
 test("tool host descriptions include schema summary for models that only surface descriptions", () => {
   const host = createHost();
-  const timelineWrite = host.listTools().find((tool) => tool.name === "cyberboss_timeline_write");
+  const timelineWrite = host.listTools().find((tool) => tool.name === "heart_anchor_timeline_write");
   assert.match(timelineWrite.description, /Input:/);
   assert.match(timelineWrite.description, /date: string/);
   assert.match(timelineWrite.description, /events: \{/);
@@ -1094,7 +1097,7 @@ test("tool host exposes whereabouts tools from the external dependency", async (
 test("tool host rejects timeline events without title or eventNodeId", async () => {
   const host = createHost();
   await assert.rejects(async () => {
-    await host.invokeTool("cyberboss_timeline_write", {
+    await host.invokeTool("heart_anchor_timeline_write", {
       date: "2026-04-22",
       events: [
         {

@@ -71,9 +71,30 @@ function listProjectToolNames() {
   ];
 }
 
+// 去重提示只做提醒不做拦截；相似检测失败时静默跳过，保存本身不受影响。
+async function findSimilarMemoriesSafe(memoryService, content) {
+  if (typeof memoryService?.findSimilar !== "function") {
+    return [];
+  }
+  try {
+    return await memoryService.findSimilar({ content });
+  } catch {
+    return [];
+  }
+}
+
+function formatSimilarNote(similar) {
+  if (!Array.isArray(similar) || !similar.length) {
+    return "";
+  }
+  const top = similar[0];
+  const preview = String(top.memory?.content || "").slice(0, 80);
+  return `\nNote: similar existing memory ${top.memory?.id} (${top.score}): ${preview} — consider heart_anchor_memory_update instead of saving a duplicate.`;
+}
+
 const PROJECT_TOOLS = [
   {
-    name: "cyberboss_diary_append",
+    name: "heart_anchor_diary_append",
     description: "Append a diary entry into Cyberboss local diary storage.",
     shortHint: "Append a diary entry with direct text content.",
     topics: ["diary"],
@@ -97,7 +118,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_reminder_create",
+    name: "heart_anchor_reminder_create",
     description: "Create a reminder in Cyberboss.",
     shortHint: "Create a reminder with direct text plus delayMinutes or dueAt.",
     topics: ["reminder"],
@@ -121,7 +142,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_system_send",
+    name: "heart_anchor_system_send",
     description: "Queue an internal Cyberboss system trigger for the current bound workspace and chat.",
     shortHint: "Queue an internal system message for the current workspace.",
     topics: ["system"],
@@ -144,7 +165,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_web_search",
+    name: "heart_anchor_web_search",
     description: "Search the public web through the configured server-side search provider. Use for recent or uncertain facts. Results are compact; do not treat snippets as full source text.",
     shortHint: "Search the web with compact results.",
     topics: ["web", "search"],
@@ -184,7 +205,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_trending",
+    name: "heart_anchor_trending",
     description: "Fetch current hot/trending topics from Chinese social platforms. Use for lightweight context checks and casual check-ins; returns compact titles only.",
     shortHint: "Fetch compact Chinese platform hot lists.",
     topics: ["web", "search", "trending"],
@@ -208,7 +229,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_calendar_upcoming",
+    name: "heart_anchor_calendar_upcoming",
     description: "Read upcoming calendar events from the configured ICS calendar cache. Use when the user asks about schedule, classes, exams, appointments, or what is coming next. Read-only; does not create or edit calendar events.",
     shortHint: "Read upcoming calendar events from cache.",
     topics: ["calendar", "schedule"],
@@ -237,7 +258,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_calendar_auth_status",
+    name: "heart_anchor_google_calendar_auth_status",
     description: "Check whether Google Calendar API OAuth is configured and authorized. Does not expose secrets.",
     shortHint: "Check Google Calendar API auth status.",
     topics: ["calendar", "schedule"],
@@ -255,7 +276,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_calendar_auth_url",
+    name: "heart_anchor_google_calendar_auth_url",
     description: "Create a Google OAuth URL for one-time Calendar authorization. Use when refresh token is missing.",
     shortHint: "Create Google Calendar OAuth URL.",
     topics: ["calendar", "schedule", "auth"],
@@ -275,7 +296,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_calendar_auth_exchange",
+    name: "heart_anchor_google_calendar_auth_exchange",
     description: "Exchange a Google OAuth authorization code for a saved refresh token. Use only with a code pasted by the user during setup.",
     shortHint: "Exchange Google Calendar OAuth code.",
     topics: ["calendar", "schedule", "auth"],
@@ -296,7 +317,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_calendar_list",
+    name: "heart_anchor_google_calendar_list",
     description: "List Google Calendar events using the authorized Calendar API. Prefer this for exact current schedule once OAuth is configured.",
     shortHint: "List Google Calendar API events.",
     topics: ["calendar", "schedule"],
@@ -318,7 +339,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_calendar_create",
+    name: "heart_anchor_google_calendar_create",
     description: "Create a Google Calendar event only after the user has explicitly confirmed the exact title, date, start time, end time, and timezone. Do not use for deletions or broad edits.",
     shortHint: "Create a confirmed Google Calendar event.",
     topics: ["calendar", "schedule"],
@@ -339,7 +360,7 @@ const PROJECT_TOOLS = [
     },
     async handler({ services, args }) {
       if (args.confirmed !== true) {
-        throw new Error("cyberboss_google_calendar_create input.confirmed must be true after explicit user confirmation.");
+        throw new Error("heart_anchor_google_calendar_create input.confirmed must be true after explicit user confirmation.");
       }
       const result = await services.googleCalendar.createEvent(args);
       return {
@@ -349,7 +370,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_calendar_update",
+    name: "heart_anchor_google_calendar_update",
     description: "Update one Google Calendar event only after the user has explicitly confirmed the event id and the exact fields to change. Use list first if the event id is unknown.",
     shortHint: "Update a confirmed Google Calendar event.",
     topics: ["calendar", "schedule"],
@@ -357,7 +378,7 @@ const PROJECT_TOOLS = [
       type: "object",
       required: ["eventId", "confirmed"],
       properties: {
-        eventId: { type: "string", description: "Google Calendar event id from cyberboss_google_calendar_list." },
+        eventId: { type: "string", description: "Google Calendar event id from heart_anchor_google_calendar_list." },
         summary: { type: "string", description: "Optional new event title." },
         start: { type: "string", description: "Optional new RFC3339 start datetime, or YYYY-MM-DD for all-day events." },
         end: { type: "string", description: "Optional new RFC3339 end datetime, or YYYY-MM-DD for all-day events. All-day end should be exclusive." },
@@ -371,7 +392,7 @@ const PROJECT_TOOLS = [
     },
     async handler({ services, args }) {
       if (args.confirmed !== true) {
-        throw new Error("cyberboss_google_calendar_update input.confirmed must be true after explicit user confirmation.");
+        throw new Error("heart_anchor_google_calendar_update input.confirmed must be true after explicit user confirmation.");
       }
       const result = await services.googleCalendar.updateEvent(args);
       return {
@@ -381,7 +402,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_calendar_delete",
+    name: "heart_anchor_google_calendar_delete",
     description: "Delete one Google Calendar event only after the user has explicitly confirmed the exact event id. Use list first if the event id is unknown.",
     shortHint: "Delete a confirmed Google Calendar event.",
     topics: ["calendar", "schedule"],
@@ -389,14 +410,14 @@ const PROJECT_TOOLS = [
       type: "object",
       required: ["eventId", "confirmed"],
       properties: {
-        eventId: { type: "string", description: "Google Calendar event id from cyberboss_google_calendar_list." },
+        eventId: { type: "string", description: "Google Calendar event id from heart_anchor_google_calendar_list." },
         confirmed: { type: "boolean", description: "Must be true only after the user explicitly confirmed deleting this exact event." },
       },
       additionalProperties: false,
     },
     async handler({ services, args }) {
       if (args.confirmed !== true) {
-        throw new Error("cyberboss_google_calendar_delete input.confirmed must be true after explicit user confirmation.");
+        throw new Error("heart_anchor_google_calendar_delete input.confirmed must be true after explicit user confirmation.");
       }
       const result = await services.googleCalendar.deleteEvent(args);
       return {
@@ -406,7 +427,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_auth_status",
+    name: "heart_anchor_google_gmail_auth_status",
     description: "Check whether Google Gmail API OAuth is configured and authorized. Does not expose secrets.",
     shortHint: "Check Google Gmail API auth status.",
     topics: ["gmail", "email", "auth"],
@@ -424,7 +445,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_auth_url",
+    name: "heart_anchor_google_gmail_auth_url",
     description: "Create a Google OAuth URL for one-time Gmail read-only authorization. Use when refresh token is missing.",
     shortHint: "Create Google Gmail OAuth URL.",
     topics: ["gmail", "email", "auth"],
@@ -444,7 +465,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_auth_exchange",
+    name: "heart_anchor_google_gmail_auth_exchange",
     description: "Exchange a Google OAuth authorization code for a saved Gmail refresh token. Use only with a code pasted by the user during setup.",
     shortHint: "Exchange Google Gmail OAuth code.",
     topics: ["gmail", "email", "auth"],
@@ -465,7 +486,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_profile",
+    name: "heart_anchor_google_gmail_profile",
     description: "Read the authorized Gmail mailbox profile and message/thread totals. Read-only.",
     shortHint: "Read Gmail mailbox profile.",
     topics: ["gmail", "email"],
@@ -483,7 +504,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_labels",
+    name: "heart_anchor_google_gmail_labels",
     description: "List Gmail labels for the authorized mailbox. Read-only.",
     shortHint: "List Gmail labels.",
     topics: ["gmail", "email"],
@@ -502,7 +523,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_search",
+    name: "heart_anchor_google_gmail_search",
     description: "Search Gmail messages using Gmail search syntax and return compact message ids only. Read-only; call read with a specific message id for details.",
     shortHint: "Search Gmail message refs.",
     topics: ["gmail", "email"],
@@ -530,7 +551,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_read",
+    name: "heart_anchor_google_gmail_read",
     description: "Read one Gmail message by id, returning headers, snippet, labels, and a compact plain-text body. Read-only.",
     shortHint: "Read one Gmail message.",
     topics: ["gmail", "email"],
@@ -538,7 +559,7 @@ const PROJECT_TOOLS = [
       type: "object",
       required: ["messageId"],
       properties: {
-        messageId: { type: "string", description: "Gmail message id from cyberboss_google_gmail_search." },
+        messageId: { type: "string", description: "Gmail message id from heart_anchor_google_gmail_search." },
       },
       additionalProperties: false,
     },
@@ -551,7 +572,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_send",
+    name: "heart_anchor_google_gmail_send",
     description: "Send a Gmail message only after the user has explicitly confirmed the exact recipients, subject, and body. This changes external state.",
     shortHint: "Send a confirmed Gmail message.",
     topics: ["gmail", "email"],
@@ -571,7 +592,7 @@ const PROJECT_TOOLS = [
       additionalProperties: false,
     },
     async handler({ services, args }) {
-      assertConfirmed("cyberboss_google_gmail_send", args);
+      assertConfirmed("heart_anchor_google_gmail_send", args);
       const result = await services.googleGmail.sendMessage(args);
       return {
         text: `Google Gmail message sent: ${result.id}.`,
@@ -580,7 +601,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_draft_create",
+    name: "heart_anchor_google_gmail_draft_create",
     description: "Create a Gmail draft only after the user has explicitly confirmed the exact recipients, subject, and body. This changes mailbox state but does not send.",
     shortHint: "Create a confirmed Gmail draft.",
     topics: ["gmail", "email"],
@@ -600,7 +621,7 @@ const PROJECT_TOOLS = [
       additionalProperties: false,
     },
     async handler({ services, args }) {
-      assertConfirmed("cyberboss_google_gmail_draft_create", args);
+      assertConfirmed("heart_anchor_google_gmail_draft_create", args);
       const result = await services.googleGmail.createDraft(args);
       return {
         text: `Google Gmail draft created: ${result.id}.`,
@@ -609,7 +630,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_mark_read",
+    name: "heart_anchor_google_gmail_mark_read",
     description: "Mark one Gmail message as read only after explicit user confirmation.",
     shortHint: "Mark Gmail message read.",
     topics: ["gmail", "email"],
@@ -623,7 +644,7 @@ const PROJECT_TOOLS = [
       additionalProperties: false,
     },
     async handler({ services, args }) {
-      assertConfirmed("cyberboss_google_gmail_mark_read", args);
+      assertConfirmed("heart_anchor_google_gmail_mark_read", args);
       const result = await services.googleGmail.markMessageRead(args);
       return {
         text: `Google Gmail message marked read: ${result.id}.`,
@@ -632,7 +653,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_mark_unread",
+    name: "heart_anchor_google_gmail_mark_unread",
     description: "Mark one Gmail message as unread only after explicit user confirmation.",
     shortHint: "Mark Gmail message unread.",
     topics: ["gmail", "email"],
@@ -646,7 +667,7 @@ const PROJECT_TOOLS = [
       additionalProperties: false,
     },
     async handler({ services, args }) {
-      assertConfirmed("cyberboss_google_gmail_mark_unread", args);
+      assertConfirmed("heart_anchor_google_gmail_mark_unread", args);
       const result = await services.googleGmail.markMessageUnread(args);
       return {
         text: `Google Gmail message marked unread: ${result.id}.`,
@@ -655,7 +676,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_archive",
+    name: "heart_anchor_google_gmail_archive",
     description: "Archive one Gmail message by removing INBOX only after explicit user confirmation.",
     shortHint: "Archive Gmail message.",
     topics: ["gmail", "email"],
@@ -669,7 +690,7 @@ const PROJECT_TOOLS = [
       additionalProperties: false,
     },
     async handler({ services, args }) {
-      assertConfirmed("cyberboss_google_gmail_archive", args);
+      assertConfirmed("heart_anchor_google_gmail_archive", args);
       const result = await services.googleGmail.archiveMessage(args);
       return {
         text: `Google Gmail message archived: ${result.id}.`,
@@ -678,7 +699,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_trash",
+    name: "heart_anchor_google_gmail_trash",
     description: "Move one Gmail message to trash only after explicit user confirmation. This does not permanently delete mail.",
     shortHint: "Move Gmail message to trash.",
     topics: ["gmail", "email"],
@@ -692,7 +713,7 @@ const PROJECT_TOOLS = [
       additionalProperties: false,
     },
     async handler({ services, args }) {
-      assertConfirmed("cyberboss_google_gmail_trash", args);
+      assertConfirmed("heart_anchor_google_gmail_trash", args);
       const result = await services.googleGmail.trashMessage(args);
       return {
         text: `Google Gmail message moved to trash: ${result.id}.`,
@@ -701,7 +722,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_google_gmail_modify_labels",
+    name: "heart_anchor_google_gmail_modify_labels",
     description: "Add or remove labels on one Gmail message only after explicit user confirmation. Use label ids from the labels tool.",
     shortHint: "Modify Gmail message labels.",
     topics: ["gmail", "email"],
@@ -717,7 +738,7 @@ const PROJECT_TOOLS = [
       additionalProperties: false,
     },
     async handler({ services, args }) {
-      assertConfirmed("cyberboss_google_gmail_modify_labels", args);
+      assertConfirmed("heart_anchor_google_gmail_modify_labels", args);
       const result = await services.googleGmail.modifyMessageLabels(args);
       return {
         text: `Google Gmail message labels modified: ${result.id}.`,
@@ -726,7 +747,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_android_alarm_set",
+    name: "heart_anchor_android_alarm_set",
     description: "Queue a confirmed Android phone command to set an alarm through the system clock app. Use only after the user confirmed the exact time and label.",
     shortHint: "Queue a confirmed Android alarm.",
     topics: ["android", "phone", "alarm"],
@@ -745,7 +766,7 @@ const PROJECT_TOOLS = [
       additionalProperties: false,
     },
     async handler({ services, args }) {
-      assertConfirmed("cyberboss_android_alarm_set", args);
+      assertConfirmed("heart_anchor_android_alarm_set", args);
       const result = await services.androidCommands.enqueueAlarm({
         ...args,
         createdBy: "mcp",
@@ -757,7 +778,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_android_timer_set",
+    name: "heart_anchor_android_timer_set",
     description: "Queue a confirmed Android phone command to set a timer through the system clock app. Use only after the user confirmed the duration and label.",
     shortHint: "Queue a confirmed Android timer.",
     topics: ["android", "phone", "timer"],
@@ -775,7 +796,7 @@ const PROJECT_TOOLS = [
       additionalProperties: false,
     },
     async handler({ services, args }) {
-      assertConfirmed("cyberboss_android_timer_set", args);
+      assertConfirmed("heart_anchor_android_timer_set", args);
       const result = await services.androidCommands.enqueueTimer({
         ...args,
         createdBy: "mcp",
@@ -787,7 +808,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_android_command_status",
+    name: "heart_anchor_android_command_status",
     description: "List queued, acknowledged, failed, or expired Android phone commands.",
     shortHint: "List Android phone commands.",
     topics: ["android", "phone"],
@@ -811,7 +832,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_memory_search",
+    name: "heart_anchor_memory_search",
     description: "Search confirmed long-term Cyberboss memories by query, type, or tag. Use for durable preferences, relationship facts, habits, and important context.",
     shortHint: "Search confirmed long-term memories.",
     topics: ["memory"],
@@ -826,7 +847,7 @@ const PROJECT_TOOLS = [
       additionalProperties: false,
     },
     async handler({ services, args }) {
-      const result = services.memory.search(args);
+      const result = await services.memory.searchRanked(args);
       return {
         text: `Memory search returned ${result.length} result${result.length === 1 ? "" : "s"}.`,
         data: result,
@@ -834,7 +855,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_memory_remember",
+    name: "heart_anchor_memory_remember",
     description: "Save a confirmed long-term memory. Use only for explicit user requests or durable facts that are clearly worth keeping.",
     shortHint: "Save a confirmed long-term memory.",
     topics: ["memory"],
@@ -852,18 +873,19 @@ const PROJECT_TOOLS = [
       additionalProperties: false,
     },
     async handler({ services, args }) {
+      const similar = await findSimilarMemoriesSafe(services.memory, args.content);
       const result = services.memory.remember({
         ...args,
         source: args.source || "tool",
       });
       return {
-        text: `Memory saved: ${result.id}`,
-        data: result,
+        text: `Memory saved: ${result.id}${formatSimilarNote(similar)}`,
+        data: { ...result, similar },
       };
     },
   },
   {
-    name: "cyberboss_memory_propose",
+    name: "heart_anchor_memory_propose",
     description: "Save a candidate long-term memory for later user confirmation. Candidate memories are not automatically injected into runtime context.",
     shortHint: "Save a candidate memory.",
     topics: ["memory"],
@@ -881,18 +903,19 @@ const PROJECT_TOOLS = [
       additionalProperties: false,
     },
     async handler({ services, args }) {
+      const similar = await findSimilarMemoriesSafe(services.memory, args.content);
       const result = services.memory.propose({
         ...args,
         source: args.source || "tool",
       });
       return {
-        text: `Memory candidate saved: ${result.id}`,
-        data: result,
+        text: `Memory candidate saved: ${result.id}${formatSimilarNote(similar)}`,
+        data: { ...result, similar },
       };
     },
   },
   {
-    name: "cyberboss_memory_list",
+    name: "heart_anchor_memory_list",
     description: "List Cyberboss memories by status, type, or tag. Defaults to confirmed memories.",
     shortHint: "List memories.",
     topics: ["memory"],
@@ -915,7 +938,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_memory_update",
+    name: "heart_anchor_memory_update",
     description: "Update one memory by id. Use to approve a candidate, adjust content/tags/importance, or archive a stale memory.",
     shortHint: "Update a memory by id.",
     topics: ["memory"],
@@ -943,7 +966,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_memory_forget",
+    name: "heart_anchor_memory_forget",
     description: "Archive one memory by id. This is a soft delete; archived memories are hidden from default search and runtime injection.",
     shortHint: "Archive a memory by id.",
     topics: ["memory"],
@@ -964,7 +987,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_channel_send_file",
+    name: "heart_anchor_channel_send_file",
     description: "Send an existing local file back to the current chat.",
     shortHint: "Send a local file back to the current channel user.",
     topics: ["channel"],
@@ -986,7 +1009,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_channel_send_voice",
+    name: "heart_anchor_channel_send_voice",
     description: "Send an existing local .silk, .amr, .ogg, or .mp3 audio file back to the current chat. Telegram defaults to playable audio; pass deliveryMode=voice for a native voice bubble. WeChat attempts a native voice item.",
     shortHint: "Send a local audio file back to the current chat.",
     topics: ["channel", "voice"],
@@ -1013,7 +1036,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_channel_speak",
+    name: "heart_anchor_channel_speak",
     description: "Generate speech from text with the configured TTS provider and send it back to the current chat. Telegram sends short TTS as a native voice bubble. Use for short spoken replies, not long articles.",
     shortHint: "Speak text through the configured TTS provider.",
     topics: ["channel", "voice", "tts"],
@@ -1060,7 +1083,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_sticker_tags",
+    name: "heart_anchor_sticker_tags",
     description: `Load the current sticker tag catalog and tagging rules only when you have decided a sticker is needed or an inbox image should be saved as a sticker. ${STICKER_TAG_GUIDANCE}`,
     shortHint: "Load sticker tags only when needed.",
     topics: ["sticker"],
@@ -1078,7 +1101,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_sticker_pick",
+    name: "heart_anchor_sticker_pick",
     description: "List a few saved sticker candidates for one sticker tag after you have decided a sticker would help.",
     shortHint: "Pick sticker candidates by tag.",
     topics: ["sticker"],
@@ -1100,7 +1123,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_sticker_send",
+    name: "heart_anchor_sticker_send",
     description: "Send a saved sticker back to the current chat by sticker id.",
     shortHint: "Send a saved sticker by id.",
     topics: ["sticker"],
@@ -1122,7 +1145,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_sticker_delete",
+    name: "heart_anchor_sticker_delete",
     description: "Delete one or more saved stickers by sticker id and remove their local GIF files.",
     shortHint: "Delete saved stickers by id array.",
     topics: ["sticker"],
@@ -1153,7 +1176,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_sticker_save_from_inbox",
+    name: "heart_anchor_sticker_save_from_inbox",
     description: `Save one or more inbox images as reusable sticker GIFs after reading them all. Use an items array even for one sticker. ${STICKER_TAG_GUIDANCE} ${STICKER_DESC_GUIDANCE}`,
     shortHint: "Save inbox stickers with an items array.",
     topics: ["sticker"],
@@ -1195,7 +1218,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_sticker_update",
+    name: "heart_anchor_sticker_update",
     description: `Overwrite tags and desc for one or more saved stickers. Use an items array even for one sticker. ${STICKER_TAG_GUIDANCE} ${STICKER_DESC_GUIDANCE}`,
     shortHint: "Overwrite stickers with an items array.",
     topics: ["sticker"],
@@ -1232,7 +1255,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_timeline_read",
+    name: "heart_anchor_timeline_read",
     description: "Read the current timeline day data for a specific date. Use this before editing when the current day state is uncertain.",
     shortHint: "Read a timeline day before editing it.",
     topics: ["timeline"],
@@ -1255,7 +1278,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_timeline_categories",
+    name: "heart_anchor_timeline_categories",
     description: "List the current timeline taxonomy categories, subcategories, and event nodes. Use this before choosing category ids or event nodes.",
     shortHint: "Inspect the current timeline taxonomy before choosing category ids or event nodes.",
     topics: ["timeline"],
@@ -1274,7 +1297,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_timeline_proposals",
+    name: "heart_anchor_timeline_proposals",
     description: "List proposed timeline event nodes, optionally filtered by date. Use this when deciding whether a new event node is actually needed.",
     shortHint: "Inspect proposed timeline event nodes before introducing new taxonomy.",
     topics: ["timeline"],
@@ -1295,7 +1318,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_timeline_write",
+    name: "heart_anchor_timeline_write",
     description: "Write timeline events through timeline-for-agent. Inspect the current day and taxonomy first when category ids, event nodes, or existing events are uncertain.",
     shortHint: "Write timeline events after checking the current day and taxonomy when needed.",
     topics: ["timeline"],
@@ -1344,7 +1367,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_timeline_build",
+    name: "heart_anchor_timeline_build",
     description: "Build the timeline site through timeline-for-agent.",
     shortHint: "Build the timeline site, optionally with locale.",
     topics: ["timeline"],
@@ -1364,7 +1387,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_timeline_serve",
+    name: "heart_anchor_timeline_serve",
     description: "Start the timeline static server through timeline-for-agent.",
     shortHint: "Serve the timeline site, optionally with locale.",
     topics: ["timeline"],
@@ -1384,7 +1407,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_timeline_dev",
+    name: "heart_anchor_timeline_dev",
     description: "Start the timeline dev server through timeline-for-agent.",
     shortHint: "Start the timeline dev server, optionally with locale.",
     topics: ["timeline"],
@@ -1404,7 +1427,7 @@ const PROJECT_TOOLS = [
     },
   },
   {
-    name: "cyberboss_timeline_screenshot",
+    name: "heart_anchor_timeline_screenshot",
     description: "Capture a timeline screenshot and send it back to the current chat.",
     shortHint: "Capture a timeline screenshot with structured selection fields.",
     topics: ["timeline"],
@@ -1514,7 +1537,7 @@ function validateTimelineWriteArgs(args) {
     const hasTitle = normalizeText(event.title).length > 0;
     const hasEventNodeId = normalizeText(event.eventNodeId).length > 0;
     if (!hasTitle && !hasEventNodeId) {
-      throw new Error(`cyberboss_timeline_write input.events[${index}].title or input.events[${index}].eventNodeId is required.`);
+      throw new Error(`heart_anchor_timeline_write input.events[${index}].title or input.events[${index}].eventNodeId is required.`);
     }
   });
 }

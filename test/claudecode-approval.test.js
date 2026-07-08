@@ -72,15 +72,15 @@ test("claudecode approval events canonicalize MCP tool approvals for stable alwa
     type: "approval.requested",
     sessionId: "thread-1",
     requestId: "req-mcp-timeline",
-    toolName: "mcp__cyberboss_tools__cyberboss_timeline_write",
+    toolName: "mcp__heart_anchor_tools__heart_anchor_timeline_write",
     input: {
       date: "2026-04-21",
       events: [],
     },
   });
 
-  assert.deepEqual(event.payload.commandTokens, ["mcp_tool", "cyberboss_tools", "cyberboss_timeline_write"]);
-  assert.match(event.payload.command, /^cyberboss_timeline_write\b/);
+  assert.deepEqual(event.payload.commandTokens, ["mcp_tool", "heart_anchor_tools", "heart_anchor_timeline_write"]);
+  assert.match(event.payload.command, /^heart_anchor_timeline_write\b/);
 });
 
 test("claudecode approval events canonicalize Read image approvals for stable matching", () => {
@@ -362,7 +362,7 @@ test("claudecode process client treats assistant text as non-deliverable until t
     message: {
       content: [
         { type: "text", text: "我先查一下。" },
-        { type: "tool_use", name: "mcp__cyberboss_tools__cyberboss_timeline_read", input: { date: "2026-05-19" } },
+        { type: "tool_use", name: "mcp__heart_anchor_tools__heart_anchor_timeline_read", input: { date: "2026-05-19" } },
       ],
     },
   });
@@ -441,7 +441,7 @@ test("claudecode process client does not fallback complete assistant text before
     message: {
       content: [
         { type: "text", text: "我先查一下。" },
-        { type: "tool_use", name: "mcp__cyberboss_tools__cyberboss_timeline_read", input: { date: "2026-05-19" } },
+        { type: "tool_use", name: "mcp__heart_anchor_tools__heart_anchor_timeline_read", input: { date: "2026-05-19" } },
       ],
     },
   });
@@ -1152,7 +1152,7 @@ test("handleRuntimeEvent auto-approves project-native MCP tool approvals without
     payload: {
       threadId: "thread-1",
       requestId: "req-project-tool",
-      commandTokens: ["mcp_tool", "cyberboss_tools", "cyberboss_timeline_write"],
+      commandTokens: ["mcp_tool", "heart_anchor_tools", "heart_anchor_timeline_write"],
     },
   });
 
@@ -1361,7 +1361,7 @@ test("handleRuntimeEvent auto-approves allowlisted MCP tool approvals", async ()
             return { bindingKey: "binding-1", workspaceRoot: "/workspace" };
           },
           getApprovalCommandAllowlistForWorkspace() {
-            return [["mcp_tool", "cyberboss_tools", "cyberboss_timeline_write"]];
+            return [["mcp_tool", "heart_anchor_tools", "heart_anchor_timeline_write"]];
           },
         };
       },
@@ -1382,7 +1382,7 @@ test("handleRuntimeEvent auto-approves allowlisted MCP tool approvals", async ()
     payload: {
       threadId: "thread-1",
       requestId: "req-mcp-allow",
-      commandTokens: ["mcp_tool", "cyberboss_tools", "cyberboss_timeline_write"],
+      commandTokens: ["mcp_tool", "heart_anchor_tools", "heart_anchor_timeline_write"],
     },
   });
 

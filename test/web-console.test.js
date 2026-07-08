@@ -131,8 +131,33 @@ function createFakeApp(config, calls) {
         },
       },
       memory: {
+        stats: () => ({
+          byStatus: { confirmed: 3, candidate: 1 },
+          byType: { fact: 2, preference: 2 },
+          candidatesNearExpiry: 1,
+          candidateTtlDays: 14,
+          embedding: { enabled: true, model: "fake", total: 4, embedded: 2, running: false },
+        }),
+        searchRanked: async (args) => {
+          calls.push(["memory.searchRanked", args.query, args.markUsed, args.explain, args.status, args.type]);
+          return [{
+            memory: { id: "mem-1", content: "既有记忆", tags: [], importance: 0.5 },
+            factors: { lex: 0.5, sem: null, recency: 1, importance: 0.5, confidence: 1, final: 0.6 },
+          }];
+        },
+        findSimilar: async ({ content }) => {
+          calls.push(["memory.findSimilar", content]);
+          return [];
+        },
+        similarPairs: () => [{
+          left: { id: "mem-1", content: "记忆A" },
+          right: { id: "mem-2", content: "记忆B" },
+          score: 0.92,
+          mode: "semantic",
+        }],
+        embeddingStatus: () => ({ enabled: false, model: "", total: 4, embedded: 0, running: false }),
         list: (args) => {
-          calls.push(["memory.list", args.status]);
+          calls.push(["memory.list", args.status, args.type]);
           return [{
             id: "mem-1",
             type: "fact",
@@ -227,6 +252,21 @@ test("saveEnvValues migrates legacy-prefixed keys on write", () => {
   const saved = envStore.readEnvFile(envFile);
   assert.equal(saved.HEART_ANCHOR_USER_NAME, "renamed");
   assert.equal(saved.CYBERBOSS_USER_NAME, undefined);
+});
+
+test("saveEnvValues accepts managed web search provider and Bocha key", () => {
+  const envFile = envStore.resolvePreferredEnvFile();
+  fs.writeFileSync(envFile, "");
+
+  const result = envStore.saveEnvValues({
+    HEART_ANCHOR_WEB_SEARCH_PROVIDER: "bocha",
+    HEART_ANCHOR_BOCHA_API_KEY: "bocha-key",
+  });
+
+  const saved = envStore.readEnvFile(envFile);
+  assert.deepEqual(result.changedKeys, ["HEART_ANCHOR_WEB_SEARCH_PROVIDER", "HEART_ANCHOR_BOCHA_API_KEY"]);
+  assert.equal(saved.HEART_ANCHOR_WEB_SEARCH_PROVIDER, "bocha");
+  assert.equal(saved.HEART_ANCHOR_BOCHA_API_KEY, "bocha-key");
 });
 
 test("settings view masks secret values but reports set state", () => {
@@ -326,12 +366,14 @@ test("memory endpoints proxy the live memory service", async () => {
   const calls = [];
   const app = createFakeApp(config, calls);
   await withServer({ app, config }, async (base) => {
-    const listResult = await (await fetch(`${base}/api/memory?status=confirmed`)).json();
+    const listResult = await (await fetch(`${base}/api/memory?status=confirmed&type=vocab`)).json();
     assert.equal(listResult.items.length, 1);
     assert.equal(listResult.items[0].content, "既有记忆");
+    assert.equal(listResult.type, "vocab");
 
-    const searchResult = await (await fetch(`${base}/api/memory?query=生日`)).json();
-    assert.deepEqual(searchResult.items, []);
+    const searchResult = await (await fetch(`${base}/api/memory?query=生日&type=vocab`)).json();
+    assert.equal(searchResult.items.length, 1);
+    assert.equal(searchResult.type, "vocab");
 
     const created = await fetch(`${base}/api/memory/create`, {
       method: "POST",
@@ -363,12 +405,48 @@ test("memory endpoints proxy the live memory service", async () => {
   });
   assert.deepEqual(calls.map((item) => item[0]), [
     "memory.list",
-    "memory.search",
+    "memory.searchRanked",
+    "memory.findSimilar",
     "memory.remember",
     "memory.update",
     "memory.forget",
   ]);
-  assert.deepEqual(calls[2][2], ["a", "b", "c"]);
+  const searchCall = calls.find((item) => item[0] === "memory.searchRanked");
+  assert.equal(searchCall[2], false, "browser search must not bump usage stats");
+  assert.equal(searchCall[5], "vocab", "browser memory search should forward type filters");
+  const listCall = calls.find((item) => item[0] === "memory.list");
+  assert.equal(listCall[2], "vocab", "browser memory list should forward type filters");
+  const rememberCall = calls.find((item) => item[0] === "memory.remember");
+  assert.deepEqual(rememberCall[2], ["a", "b", "c"]);
+});
+
+test("memory stats, debug, similar and backfill endpoints work against the live service", async () => {
+  const config = createConfig(path.join(TMP_ROOT, "state-memory-v2"));
+  writeSessionsFixture(config);
+  const calls = [];
+  const app = createFakeApp(config, calls);
+  await withServer({ app, config }, async (base) => {
+    const stats = await (await fetch(`${base}/api/memory/stats`)).json();
+    assert.equal(stats.byStatus.confirmed, 3);
+    assert.equal(stats.embedding.embedded, 2);
+
+    const debug = await (await fetch(`${base}/api/memory/debug?query=咖啡`)).json();
+    assert.equal(debug.items.length, 1);
+    assert.equal(debug.items[0].factors.final, 0.6);
+    const debugCall = calls.find((item) => item[0] === "memory.searchRanked");
+    assert.equal(debugCall[2], false, "debug recall must pass markUsed:false");
+    assert.equal(debugCall[3], true, "debug recall must request explain");
+
+    const missingQuery = await fetch(`${base}/api/memory/debug`);
+    assert.equal(missingQuery.status, 400);
+
+    const similar = await (await fetch(`${base}/api/memory/similar`)).json();
+    assert.equal(similar.pairs.length, 1);
+    assert.equal(similar.pairs[0].score, 0.92);
+
+    const backfill = await fetch(`${base}/api/memory/backfill`, { method: "POST" });
+    assert.equal(backfill.status, 400, "backfill without embedding config should 400");
+  });
 });
 
 test("memory endpoints are unavailable in standalone mode", async () => {

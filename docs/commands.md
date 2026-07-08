@@ -73,15 +73,15 @@ Models no longer use local capability CLI commands for diary, reminders, timelin
 
 Those capabilities are exposed as project-native structured tools:
 
-- `cyberboss_channel_send_file`
-- `cyberboss_diary_append`
-- `cyberboss_reminder_create`
-- `cyberboss_system_send`
-- `cyberboss_timeline_write`
-- `cyberboss_timeline_build`
-- `cyberboss_timeline_serve`
-- `cyberboss_timeline_dev`
-- `cyberboss_timeline_screenshot`
+- `heart_anchor_channel_send_file`
+- `heart_anchor_diary_append`
+- `heart_anchor_reminder_create`
+- `heart_anchor_system_send`
+- `heart_anchor_timeline_write`
+- `heart_anchor_timeline_build`
+- `heart_anchor_timeline_serve`
+- `heart_anchor_timeline_dev`
+- `heart_anchor_timeline_screenshot`
 
 Notes:
 - These tools are bound to the Heart-Anchor project and routed through the repo's internal tool host.

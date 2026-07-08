@@ -11,7 +11,7 @@ function resolveCodexProjectToolMcpServerConfig({ cyberbossHome = "" } = {}) {
     return null;
   }
   return {
-    name: "cyberboss_tools",
+    name: "heart_anchor_tools",
     command: process.execPath,
     args: [scriptPath, "tool-mcp-server", "--runtime-id", "codex"],
   };
@@ -21,7 +21,7 @@ function buildCodexMcpConfigArgs(mcpServerConfig) {
   if (!mcpServerConfig || typeof mcpServerConfig !== "object") {
     return [];
   }
-  const name = normalizeNonEmptyString(mcpServerConfig.name) || "cyberboss_tools";
+  const name = normalizeNonEmptyString(mcpServerConfig.name) || "heart_anchor_tools";
   const command = normalizeNonEmptyString(mcpServerConfig.command);
   const args = Array.isArray(mcpServerConfig.args)
     ? mcpServerConfig.args.map((value) => normalizeNonEmptyString(value)).filter(Boolean)

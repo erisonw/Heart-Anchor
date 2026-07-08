@@ -10,7 +10,7 @@ const PROJECT_ROOT = process.env.HEART_ANCHOR_HOME || process.env.CYBERBOSS_HOME
 const LOCAL_ENV_FILE = path.join(PROJECT_ROOT, ".env");
 const HOME_ENV_FILE = path.join(STATE_DIR, ".env");
 
-const SECRET_PLACEHOLDER = "__cyberboss_secret_unchanged__";
+const SECRET_PLACEHOLDER = "__heart_anchor_secret_unchanged__";
 
 // 基础设置面向首次使用者；复杂/罕用参数一律进带 advanced 标记的组，前端折叠进「高级设置」。
 const FIELD_GROUPS = [
@@ -127,6 +127,22 @@ const FIELD_GROUPS = [
       field("HEART_ANCHOR_VISION_API_KEY", "API Key", { secret: true }),
       field("HEART_ANCHOR_VISION_MODEL", "模型"),
       field("HEART_ANCHOR_VISION_TIMEOUT_MS", "超时(ms)", { inputMode: "numeric" }),
+    ],
+  },
+  {
+    id: "web-search",
+    title: "Web 搜索",
+    description: "联网搜索 provider 与 API key。",
+    advanced: true,
+    fields: [
+      field("HEART_ANCHOR_WEB_SEARCH_PROVIDER", "Search Provider", {
+        kind: "select",
+        options: ["", "brave", "tavily", "bocha"],
+      }),
+      field("HEART_ANCHOR_BRAVE_SEARCH_API_KEY", "Brave API Key", { secret: true }),
+      field("HEART_ANCHOR_TAVILY_API_KEY", "Tavily API Key", { secret: true }),
+      field("HEART_ANCHOR_BOCHA_API_KEY", "Bocha API Key", { secret: true }),
+      field("HEART_ANCHOR_WEB_SEARCH_TIMEOUT_MS", "超时(ms)", { inputMode: "numeric" }),
     ],
   },
   {

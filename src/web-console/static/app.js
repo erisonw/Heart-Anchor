@@ -121,6 +121,7 @@
     }
     if (button.dataset.tab === "memory") {
       loadMemories();
+      loadMemoryStats();
     }
     if (button.dataset.tab === "integrations") {
       loadIntegrations();
@@ -425,7 +426,7 @@
   }
 
   // ---------- memory ----------
-  const MEMORY_TYPE_LABELS = { fact: "事实", preference: "偏好", event: "事件", relationship: "关系" };
+  const MEMORY_TYPE_LABELS = { fact: "事实", preference: "偏好", event: "事件", relationship: "关系", vocab: "词汇" };
 
   async function loadMemories() {
     const list = $("memory-list");
@@ -434,6 +435,7 @@
       const params = new URLSearchParams({
         query: $("memory-search").value.trim(),
         status: $("memory-status").value,
+        type: $("memory-type-filter").value,
       });
       const data = await api("/api/memory?" + params.toString());
       renderMemories(data.items || []);
@@ -490,6 +492,7 @@
     if (event.key === "Enter") loadMemories();
   });
   $("memory-status").addEventListener("change", () => loadMemories());
+  $("memory-type-filter").addEventListener("change", () => loadMemories());
   $("memory-add-btn").addEventListener("click", () => {
     $("memory-add-form").classList.toggle("collapsed");
   });
@@ -586,6 +589,138 @@
     });
   }
 
+  // ---------- memory v2: stats / debug / similar ----------
+  const MEMORY_STATUS_LABELS = { confirmed: "已确认", candidate: "待确认", archived: "已归档" };
+
+  async function loadMemoryStats() {
+    try {
+      const stats = await api("/api/memory/stats");
+      const badge = $("memory-embed-badge");
+      if (stats.embedding.enabled) {
+        badge.textContent = "语义召回 " + stats.embedding.embedded + "/" + stats.embedding.total
+          + (stats.embedding.running ? "（回填中…）" : "");
+        badge.className = "badge " + (stats.embedding.embedded >= stats.embedding.total ? "ok" : "warn");
+      } else {
+        badge.textContent = "词法召回（未配置 embedding）";
+        badge.className = "badge";
+      }
+      const statusText = Object.entries(stats.byStatus)
+        .map(([status, count]) => (MEMORY_STATUS_LABELS[status] || status) + " " + count)
+        .join(" · ") || "—";
+      const typeText = Object.entries(stats.byType)
+        .map(([type, count]) => escapeHtml(type) + " " + count)
+        .join(" · ") || "—";
+      const consolidation = stats.consolidation || {};
+      $("memory-stats").innerHTML = kvRows([
+        ["数量", escapeHtml(statusText)],
+        ["类型分布", typeText],
+        ["即将过期的候选", stats.candidatesNearExpiry
+          ? '<span class="badge warn">' + stats.candidatesNearExpiry + ' 条（' + stats.candidateTtlDays + ' 天未确认将归档）</span>'
+          : "无"],
+        ["夜间整理", (consolidation.enabled
+          ? '<span class="badge ok">每天 ' + escapeHtml(consolidation.time || "") + '</span>'
+          : '<span class="badge">未启用</span>')
+          + (consolidation.lastQueuedAt ? ' 上次入队 ' + escapeHtml(fmtTime(consolidation.lastQueuedAt)) : "")],
+      ]);
+      $("memory-backfill-btn").disabled = !stats.embedding.enabled
+        || stats.embedding.running
+        || (stats.embedding.embedded >= stats.embedding.total && stats.embedding.total > 0);
+      if (stats.embedding.running) {
+        setTimeout(loadMemoryStats, 3000);
+      }
+    } catch (error) {
+      $("memory-stats").innerHTML = '<span class="k">状态</span><span class="v">' + escapeHtml(error.message) + '</span>';
+    }
+  }
+
+  $("memory-backfill-btn").addEventListener("click", async () => {
+    try {
+      const result = await api("/api/memory/backfill", { method: "POST" });
+      toast(result.message || "已启动");
+      await loadMemoryStats();
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
+
+  $("memory-consolidate-btn").addEventListener("click", async () => {
+    if (!confirm("立即让 agent 静默整理记忆（去重、提炼候选）？会消耗一次 agent 轮次。")) return;
+    try {
+      const result = await api("/api/memory/consolidate", { method: "POST" });
+      toast(result.message || "已入队");
+      await loadMemoryStats();
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
+
+  $("memory-debug-btn").addEventListener("click", runMemoryDebug);
+  $("memory-debug-query").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") runMemoryDebug();
+  });
+
+  async function runMemoryDebug() {
+    const query = $("memory-debug-query").value.trim();
+    if (!query) {
+      toast("请输入查询文本", true);
+      return;
+    }
+    const container = $("memory-debug-result");
+    container.innerHTML = '<div class="empty">召回中…</div>';
+    try {
+      const data = await api("/api/memory/debug?" + new URLSearchParams({ query }).toString());
+      container.innerHTML = data.items.length
+        ? data.items.map((item) =>
+            '<div class="item"><div class="title">'
+            + '<span class="badge ok">总分 ' + item.factors.final + '</span>'
+            + '<span class="badge">词法 ' + item.factors.lex + '</span>'
+            + '<span class="badge">' + (item.factors.sem === null ? "语义 —" : "语义 " + item.factors.sem) + '</span>'
+            + '<span class="badge">新鲜度 ' + item.factors.recency + '</span>'
+            + '</div><div class="memory-content">' + escapeHtml(item.content) + '</div></div>'
+          ).join("")
+        : '<div class="empty">没有命中任何记忆。</div>';
+    } catch (error) {
+      container.innerHTML = '<div class="empty">' + escapeHtml(error.message) + '</div>';
+    }
+  }
+
+  $("memory-similar-btn").addEventListener("click", loadSimilarPairs);
+
+  async function loadSimilarPairs() {
+    const container = $("memory-similar-list");
+    container.innerHTML = '<div class="empty">扫描中…</div>';
+    try {
+      const data = await api("/api/memory/similar");
+      container.innerHTML = data.pairs.length
+        ? data.pairs.map((pair) =>
+            '<div class="item"><div class="title"><span class="badge warn">相似度 ' + pair.score + '</span>'
+            + '<span class="badge">' + (pair.mode === "semantic" ? "语义" : "词法") + '</span></div>'
+            + '<div class="memory-content">A：' + escapeHtml(pair.left.content) + '</div>'
+            + '<div class="memory-content">B：' + escapeHtml(pair.right.content) + '</div>'
+            + '<div class="actions">'
+            + '<button class="btn similar-keep" data-drop="' + escapeHtml(pair.right.id) + '" type="button">保留 A 归档 B</button>'
+            + '<button class="btn similar-keep" data-drop="' + escapeHtml(pair.left.id) + '" type="button">保留 B 归档 A</button>'
+            + '</div></div>'
+          ).join("")
+        : '<div class="empty">没有发现近重复记忆。</div>';
+    } catch (error) {
+      container.innerHTML = '<div class="empty">' + escapeHtml(error.message) + '</div>';
+    }
+  }
+
+  document.addEventListener("click", async (event) => {
+    const button = event.target.closest(".similar-keep");
+    if (!button) return;
+    try {
+      await api("/api/memory/forget", { method: "POST", body: JSON.stringify({ id: button.dataset.drop }) });
+      toast("已归档重复记忆");
+      await loadSimilarPairs();
+      await loadMemoryStats();
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
+
   // ---------- integrations ----------
   const INTEGRATION_STATUS = {
     connected: ["已连接", "ok"],
@@ -606,7 +741,7 @@
       list.innerHTML = '<div class="empty">' + escapeHtml(error.message) + '</div>';
     }
     // 第三方 MCP 从 /api/state 的 mcp 区取
-    const mcpServers = (state.data?.mcp?.servers || []).filter((item) => item.name !== "cyberboss_tools");
+    const mcpServers = (state.data?.mcp?.servers || []).filter((item) => item.name !== "heart_anchor_tools" && item.name !== "cyberboss_tools");
     $("integrations-mcp").innerHTML = mcpServers.length
       ? mcpServers.map((serverItem) =>
           '<div class="item"><div class="title">' + escapeHtml(serverItem.name)

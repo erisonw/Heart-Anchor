@@ -45,6 +45,7 @@ const {
   splitCommandLine,
 } = require("../adapters/runtime/shared/approval-command");
 const { runSystemCheckinPoller } = require("../app/system-checkin-poller");
+const { runMemoryConsolidationScheduler } = require("../app/memory-consolidation-scheduler");
 const { createProjectTooling } = require("../tools/create-project-tooling");
 const { normalizeText, normalizeIsoTime, formatCompactNumber } = require("./values");
 const { formatContextStatusLine } = require("./context-format");
@@ -109,6 +110,7 @@ class CyberbossApp {
       onDeferredSystemReply: (payload) => this.deferSystemReply(payload),
     });
     this.pendingOperationByRunKey = new Map();
+    this.recentInboundTextByScope = new Map();
     this.runtimeEventChain = Promise.resolve();
     this.runtimeAdapter.onEvent((event) => {
       this.threadStateStore.applyRuntimeEvent(event);
@@ -181,6 +183,15 @@ class CyberbossApp {
       console.log("[heart-anchor] checkin: enabled");
       void runSystemCheckinPoller(this.config).catch((error) => {
         console.error(`[heart-anchor] checkin poller stopped: ${error.message}`);
+      });
+    }
+    if (this.config.startWithMemoryConsolidation) {
+      console.log("[heart-anchor] memory consolidation: enabled");
+      void runMemoryConsolidationScheduler({
+        config: this.config,
+        memoryService: this.projectServices?.memory,
+      }).catch((error) => {
+        console.error(`[heart-anchor] memory consolidation scheduler stopped: ${error.message}`);
       });
     }
 
@@ -589,7 +600,12 @@ class CyberbossApp {
 
     try {
       const model = this.runtimeAdapter.getSessionStore().getRuntimeParamsForWorkspace(bindingKey, workspaceRoot).model;
-      const runtimeTurn = await this.buildRuntimeTurn({ prepared, model });
+      const runtimeTurn = await this.buildRuntimeTurn({
+        prepared,
+        model,
+        recentTexts: this.recentInboundTexts?.(bindingKey, workspaceRoot) || [],
+      });
+      this.recordRecentInboundText?.(bindingKey, workspaceRoot, prepared);
       const sendTurn = typeof this.runtimeAdapter.sendTurn === "function"
         ? this.runtimeAdapter.sendTurn.bind(this.runtimeAdapter)
         : this.runtimeAdapter.sendTextTurn.bind(this.runtimeAdapter);
@@ -641,7 +657,7 @@ class CyberbossApp {
     }
   }
 
-  async buildRuntimeTurn({ prepared, model = "" }) {
+  async buildRuntimeTurn({ prepared, model = "", recentTexts = [] }) {
     if (prepared?.provider === "system") {
       return {
         text: String(prepared.text || "").trim(),
@@ -655,7 +671,7 @@ class CyberbossApp {
       model,
     });
     return {
-      text: appendMemoryContextToRuntimeText({
+      text: await appendMemoryContextToRuntimeText({
         text: assembleRuntimeTurnText({
           prepared,
           config: this.config,
@@ -663,10 +679,36 @@ class CyberbossApp {
         }),
         prepared,
         services: this.projectServices,
+        recentTexts,
       }),
       attachments: Array.isArray(visionContext.runtimeAttachments) ? visionContext.runtimeAttachments : [],
       visionContext,
     };
+  }
+
+  // 最近入站文本的环形缓冲：让记忆召回带上对话上下文，而不只是当前一条消息。
+  recentInboundTexts(bindingKey, workspaceRoot) {
+    return this.recentInboundTextByScope?.get(buildScopeKey(bindingKey, workspaceRoot)) || [];
+  }
+
+  recordRecentInboundText(bindingKey, workspaceRoot, prepared) {
+    if (!this.recentInboundTextByScope || prepared?.provider === "system") {
+      return;
+    }
+    const text = String(prepared?.originalText ?? prepared?.text ?? "").trim().slice(0, 200);
+    if (!text) {
+      return;
+    }
+    const scopeKey = buildScopeKey(bindingKey, workspaceRoot);
+    if (!scopeKey) {
+      return;
+    }
+    const buffer = this.recentInboundTextByScope.get(scopeKey) || [];
+    buffer.push(text);
+    while (buffer.length > 3) {
+      buffer.shift();
+    }
+    this.recentInboundTextByScope.set(scopeKey, buffer);
   }
 
   async routePreparedInbound({ bindingKey, workspaceRoot, prepared }) {
@@ -2094,17 +2136,16 @@ function parseChannelCommand(text) {
   };
 }
 
-function appendMemoryContextToRuntimeText({ text, prepared, services }) {
+async function appendMemoryContextToRuntimeText({ text, prepared, services, recentTexts = [] }) {
   const baseText = String(text || "").trim();
-  const query = String(prepared?.originalText ?? prepared?.text ?? "").trim();
-  if (!query || !services?.memory) {
+  const currentText = String(prepared?.originalText ?? prepared?.text ?? "").trim();
+  if (!currentText || !services?.memory) {
     return baseText;
   }
+  // 查询带上最近几轮入站文本，让"接着聊"的召回不只依赖当前一句。
+  const query = [...recentTexts, currentText].filter(Boolean).join("\n");
   try {
-    const memoryContext = services.memory.buildRuntimeContext({
-      query,
-      limit: 5,
-    });
+    const memoryContext = await services.memory.buildRuntimeContext({ query });
     if (!memoryContext) {
       return baseText;
     }
@@ -2229,7 +2270,7 @@ function matchesBuiltInCommandPrefix(commandTokens) {
     return true;
   }
 
-   if (normalized[0] === "mcp_tool" && normalized[1] === "cyberboss_tools") {
+  if (normalized[0] === "mcp_tool" && (normalized[1] === "heart_anchor_tools" || normalized[1] === "cyberboss_tools")) {
     return true;
   }
 

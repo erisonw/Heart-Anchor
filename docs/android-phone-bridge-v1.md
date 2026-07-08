@@ -94,9 +94,9 @@ clients/galaxy-watch-health-bridge/app/google-services.json
 
 工具名：
 
-- `cyberboss_android_alarm_set`
-- `cyberboss_android_timer_set`
-- `cyberboss_android_command_status`
+- `heart_anchor_android_alarm_set`
+- `heart_anchor_android_timer_set`
+- `heart_anchor_android_command_status`
 
 设置类工具必须在云端已经向用户确认具体动作后传 `confirmed: true`。
 

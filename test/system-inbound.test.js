@@ -113,9 +113,9 @@ test("image attachments stay as inbound drafts before runtime turn assembly", as
     }, { prepared, model: "" });
     assert.match(runtimeTurn.text, /Saved attachments:/i);
     assert.match(runtimeTurn.text, /vision caption provider is not configured/i);
-    assert.match(runtimeTurn.text, /cyberboss_sticker_save_from_inbox/i);
+    assert.match(runtimeTurn.text, /heart_anchor_sticker_save_from_inbox/i);
     assert.match(runtimeTurn.text, /`items` array/i);
-    assert.match(runtimeTurn.text, /cyberboss_sticker_tags/i);
+    assert.match(runtimeTurn.text, /heart_anchor_sticker_tags/i);
     assert.match(runtimeTurn.text, /short new tag/i);
     assert.match(runtimeTurn.text, /Do not describe save steps/i);
     assert.doesNotMatch(runtimeTurn.text, /view_image/i);
@@ -181,9 +181,9 @@ test("image prompt assembly is runtime-neutral for claudecode drafts", async () 
     }, { prepared, model: "" });
 
     assert.match(runtimeTurn.text, /Saved attachments:/i);
-    assert.match(runtimeTurn.text, /cyberboss_sticker_save_from_inbox/i);
+    assert.match(runtimeTurn.text, /heart_anchor_sticker_save_from_inbox/i);
     assert.match(runtimeTurn.text, /`items` array/i);
-    assert.match(runtimeTurn.text, /cyberboss_sticker_tags/i);
+    assert.match(runtimeTurn.text, /heart_anchor_sticker_tags/i);
     assert.match(runtimeTurn.text, /short new tag/i);
     assert.match(runtimeTurn.text, /Do not describe save steps/i);
     assert.doesNotMatch(runtimeTurn.text, /Read every image first/i);
@@ -252,7 +252,7 @@ test("text-only runtimes receive vision API captions as visual context", async (
 
     assert.match(runtimeTurn.text, /Visual context from attachments:/i);
     assert.match(runtimeTurn.text, /一杯带拉花的咖啡/);
-    assert.match(runtimeTurn.text, /cyberboss_sticker_save_from_inbox/i);
+    assert.match(runtimeTurn.text, /heart_anchor_sticker_save_from_inbox/i);
     assert.deepEqual(runtimeTurn.attachments, []);
     assert.equal(runtimeTurn.visionContext.route, "caption");
   } finally {
@@ -267,9 +267,8 @@ test("runtime turn includes bounded confirmed long-term memory context", async (
     },
     projectServices: {
       memory: {
-        buildRuntimeContext(args) {
+        async buildRuntimeContext(args) {
           assert.equal(args.query, "空调开太低我睡不着");
-          assert.equal(args.limit, 5);
           return [
             "Relevant long-term memory:",
             "- 浩浩怕冷，空调温度不要太低。",

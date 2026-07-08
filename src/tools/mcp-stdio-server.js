@@ -28,7 +28,7 @@ function runToolMcpServer({ toolHost, runtimeId = "", workspaceRoot = "" }) {
             },
           },
           serverInfo: {
-            name: "cyberboss-tools",
+            name: "heart-anchor-tools",
             version: "0.1.0",
           },
         }, reader.getMode());
@@ -142,7 +142,7 @@ function buildToolResources(toolCatalog) {
   const resources = [];
   resources.push({
     uri: "cyberboss://tools/index",
-    name: "Cyberboss Tool Index",
+    name: "Heart-Anchor Tool Index",
     description: "Overview of Cyberboss project tools with schemas and usage notes.",
     mimeType: "text/markdown",
     text: buildToolIndexMarkdown(tools),

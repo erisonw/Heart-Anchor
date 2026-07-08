@@ -85,8 +85,8 @@ function assembleRuntimeTurnText({ prepared, config = {}, visionContext = {} }) 
 
   if (imageAttachments.length) {
     pushSectionBreak(lines);
-    lines.push(`If some images are reusable stickers, load \`cyberboss_sticker_tags\` only when needed. ${STICKER_TAG_GUIDANCE}`);
-    lines.push(`To save reusable stickers, call \`cyberboss_sticker_save_from_inbox\` once with an \`items\` array. Use 1-3 tags. ${STICKER_DESC_GUIDANCE} Skip ordinary photos, screenshots, and unclear images.`);
+    lines.push(`If some images are reusable stickers, load \`heart_anchor_sticker_tags\` only when needed. ${STICKER_TAG_GUIDANCE}`);
+    lines.push(`To save reusable stickers, call \`heart_anchor_sticker_save_from_inbox\` once with an \`items\` array. Use 1-3 tags. ${STICKER_DESC_GUIDANCE} Skip ordinary photos, screenshots, and unclear images.`);
     lines.push("Do not describe save steps. The system sends the sticker notice.");
   }
 

@@ -18,8 +18,8 @@ Heart-Anchor 是一个个人 Agent 桥接系统：把 Claude Code / Codex / Anti
 - 手表桥接：Galaxy Watch 心率告警、睡眠摘要、久坐提醒等健康事件接入（`clients/galaxy-watch-health-bridge`）。
 - 手机远程命令：云端经 FCM 唤醒手机设置闹钟/计时器（Phone Bridge v1）。
 - 主动消息系统：check-in、reminder、Android trigger、location trigger 统一进入 system queue。
-- 长期记忆：sqlite 记忆库（确认 / 候选 / 归档三态），运行时上下文注入 + 控制台可视化管理。
-- 项目 MCP 工具：timeline、diary、reminder、memory、file send、sticker、voice、web search、trending、Google 日历/Gmail、Netease music 等能力通过 `cyberboss_tools` 暴露给运行时。
+- 长期记忆：sqlite 记忆库（确认 / 候选 / 归档三态），词法 + 可选语义（embedding）混合召回、时间衰减、对话上下文感知注入，控制台可视化管理。
+- 项目 MCP 工具：timeline、diary、reminder、memory、file send、sticker、voice、web search、trending、Google 日历/Gmail、Netease music 等能力通过 `heart_anchor_tools` 暴露给运行时。
 - 网易云音乐：扫码/手动 cookie 登录、搜索、播放 URL、歌词、歌单、日推、私人 FM、喜欢列表等约 30 个工具。
 - 可切换 TTS：ElevenLabs / OpenAI-compatible 或阿里云百炼 CosyVoice，配合 channel file / voice 工具发送。
 - Web 控制台：随主进程内嵌启动，提供运行总览（含上下文用量）、会话操作、消息队列、记忆浏览器、集成授权（Google OAuth / 网易云扫码）、实时日志流和分级设置面板。
@@ -271,6 +271,7 @@ HEART_ANCHOR_VISION_MODEL=
 HEART_ANCHOR_WEB_SEARCH_PROVIDER=
 HEART_ANCHOR_BRAVE_SEARCH_API_KEY=
 HEART_ANCHOR_TAVILY_API_KEY=
+HEART_ANCHOR_BOCHA_API_KEY=
 
 HEART_ANCHOR_NETEASE_COOKIE=
 HEART_ANCHOR_NETEASE_REAL_IP=
@@ -289,7 +290,7 @@ HEART_ANCHOR_ELEVENLABS_SPEED=
 
 Android 侧推荐先用 MacroDroid 做系统事件采集，再通过 HTTP webhook 发给 Heart-Anchor。
 
-需要让云端确认后远程设置手机闹钟/计时器时，使用 Android companion app 的 Phone Bridge v1。服务端暴露 `cyberboss_android_alarm_set`、`cyberboss_android_timer_set`、`cyberboss_android_command_status`，设置类工具必须传 `confirmed: true`。
+需要让云端确认后远程设置手机闹钟/计时器时，使用 Android companion app 的 Phone Bridge v1。服务端暴露 `heart_anchor_android_alarm_set`、`heart_anchor_android_timer_set`、`heart_anchor_android_command_status`，设置类工具必须传 `confirmed: true`。
 
 Galaxy Watch7 / S23 Ultra v1 见 [docs/galaxy-watch7-v1-setup.md](docs/galaxy-watch7-v1-setup.md)，当前推荐先接心率告警和睡眠摘要。
 
@@ -316,7 +317,7 @@ Android / MacroDroid
 
 ## Netease Music MCP
 
-网易云音乐能力并入现有 `cyberboss_tools`，不是单独起一个 MCP server。第一版保留约 30 个高频工具：
+网易云音乐能力并入现有 `heart_anchor_tools`，不是单独起一个 MCP server。第一版保留约 30 个高频工具：
 
 - 登录状态与 QR 登录。
 - 搜索、热搜、榜单。
@@ -328,7 +329,7 @@ Android / MacroDroid
 
 ## Web Search
 
-支持 Brave Search 与 Tavily 两种 provider。工具返回紧凑结果，避免把整页搜索结果直接塞进上下文。
+支持 Brave Search、Tavily 与 Bocha 三种 provider。工具返回紧凑结果，避免把整页搜索结果直接塞进上下文。
 
 ```dotenv
 HEART_ANCHOR_WEB_SEARCH_PROVIDER=tavily
@@ -340,6 +341,13 @@ HEART_ANCHOR_TAVILY_API_KEY=<your_key>
 ```dotenv
 HEART_ANCHOR_WEB_SEARCH_PROVIDER=brave
 HEART_ANCHOR_BRAVE_SEARCH_API_KEY=<your_key>
+```
+
+国内中文新词、热梗和公众号/百科类结果优先试 Bocha：
+
+```dotenv
+HEART_ANCHOR_WEB_SEARCH_PROVIDER=bocha
+HEART_ANCHOR_BOCHA_API_KEY=<your_key>
 ```
 
 ## 语音与音频

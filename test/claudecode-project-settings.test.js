@@ -35,7 +35,7 @@ test("ensureClaudeProjectMcpConfig upserts cyberboss MCP server into workspace .
     command: "uvx",
     args: ["other"],
   });
-  assert.deepEqual(saved.mcpServers.cyberboss_tools, buildClaudeProjectMcpServerConfig({
+  assert.deepEqual(saved.mcpServers.heart_anchor_tools, buildClaudeProjectMcpServerConfig({
     workspaceRoot,
     cyberbossHome,
   }));
@@ -52,7 +52,7 @@ test("ensureClaudeProjectMcpConfig rewrites stale cyberboss MCP server config", 
   fs.writeFileSync(path.join(cyberbossHome, "bin", "cyberboss.js"), "#!/usr/bin/env node\n", "utf8");
   fs.writeFileSync(configPath, JSON.stringify({
     mcpServers: {
-      cyberboss_tools: {
+      heart_anchor_tools: {
         command: "node",
         args: ["old.js"],
       },
@@ -62,7 +62,7 @@ test("ensureClaudeProjectMcpConfig rewrites stale cyberboss MCP server config", 
   ensureClaudeProjectMcpConfig({ workspaceRoot, cyberbossHome });
 
   const saved = JSON.parse(fs.readFileSync(configPath, "utf8"));
-  assert.deepEqual(saved.mcpServers.cyberboss_tools, buildClaudeProjectMcpServerConfig({
+  assert.deepEqual(saved.mcpServers.heart_anchor_tools, buildClaudeProjectMcpServerConfig({
     workspaceRoot,
     cyberbossHome,
   }));

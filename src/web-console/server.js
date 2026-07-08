@@ -19,6 +19,11 @@ const {
   memoryCreate,
   memoryUpdate,
   memoryForget,
+  memoryStats,
+  memoryDebugRecall,
+  memorySimilarPairs,
+  memoryBackfill,
+  memoryConsolidate,
   integrationsStatus,
   googleAuthUrl,
   googleExchange,
@@ -145,15 +150,39 @@ async function handleRequest(context, request, response) {
     return;
   }
   if (request.method === "GET" && url.pathname === "/api/memory") {
-    sendJson(response, 200, memoryQuery(context, {
+    sendJson(response, 200, await memoryQuery(context, {
       query: url.searchParams.get("query") || "",
       status: url.searchParams.get("status") || "",
+      type: url.searchParams.get("type") || "",
     }));
     return;
   }
   if (request.method === "POST" && url.pathname === "/api/memory/create") {
     const body = await readJsonBody(request);
-    sendJson(response, 200, { ok: true, ...memoryCreate(context, body) });
+    sendJson(response, 200, { ok: true, ...(await memoryCreate(context, body)) });
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/memory/stats") {
+    sendJson(response, 200, memoryStats(context));
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/memory/debug") {
+    sendJson(response, 200, await memoryDebugRecall(context, {
+      query: url.searchParams.get("query") || "",
+      status: url.searchParams.get("status") || "",
+    }));
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/memory/similar") {
+    sendJson(response, 200, memorySimilarPairs(context));
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/memory/backfill") {
+    sendJson(response, 200, { ok: true, ...memoryBackfill(context) });
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/memory/consolidate") {
+    sendJson(response, 200, { ok: true, ...memoryConsolidate(context) });
     return;
   }
   if (request.method === "POST" && url.pathname === "/api/memory/update") {

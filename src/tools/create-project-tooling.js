@@ -7,6 +7,7 @@ const { DiaryService } = require("../services/diary-service");
 const { GoogleCalendarService } = require("../services/google-calendar-service");
 const { GoogleGmailService } = require("../services/google-gmail-service");
 const { MemoryService } = require("../services/memory-service");
+const { MemoryEmbeddingService } = require("../services/memory-embedding-service");
 const { createTtsService } = require("../services/tts-service");
 const { ReminderService } = require("../services/reminder-service");
 const { AndroidCommandService } = require("../services/android-command-service");
@@ -53,7 +54,7 @@ function createProjectTooling(config, options = {}) {
     calendar: new CalendarService({ config }),
     googleCalendar: new GoogleCalendarService({ config }),
     googleGmail: new GoogleGmailService({ config }),
-    memory: new MemoryService({ config }),
+    memory: new MemoryService({ config, embedder: new MemoryEmbeddingService({ config }) }),
     netease: new NeteaseMusicService({ config }),
     voiceTranscoder,
     androidCommands,

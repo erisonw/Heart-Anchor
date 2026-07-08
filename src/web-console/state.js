@@ -286,7 +286,7 @@ function readMcpState() {
     servers: names.map((name) => ({
       name,
       enabled: Boolean(enabled[name]),
-      canToggle: name !== "cyberboss_tools",
+      canToggle: name !== "heart_anchor_tools" && name !== "cyberboss_tools",
       command: normalizeText((enabled[name] || disabled[name] || {}).command),
     })),
   };

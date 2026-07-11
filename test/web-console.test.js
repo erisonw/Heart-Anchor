@@ -89,6 +89,10 @@ function createFakeApp(config, calls) {
         calls.push(["compactThread", args.threadId, args.workspaceRoot]);
         return { turnId: "turn-9" };
       },
+      refreshThreadInstructions: async (args) => {
+        calls.push(["refreshThreadInstructions", args.threadId, args.workspaceRoot]);
+        return { turnId: "turn-10" };
+      },
     },
     threadStateStore: {
       getThreadState: () => ({
@@ -332,6 +336,8 @@ test("thread and system actions run through the live app adapters", async () => 
     assert.equal(newResult.status, 200);
     const compactResult = await fetch(`${base}/api/thread/compact`, { method: "POST" });
     assert.equal(compactResult.status, 200);
+    const rereadResult = await fetch(`${base}/api/thread/reread`, { method: "POST" });
+    assert.equal(rereadResult.status, 200);
     const sendResult = await fetch(`${base}/api/system/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -343,10 +349,13 @@ test("thread and system actions run through the live app adapters", async () => 
     "startFreshThreadDraft",
     "clearThreadId",
     "compactThread",
+    "refreshThreadInstructions",
     "queueMessage",
   ]);
-  assert.equal(calls[2][1], "thread-1");
-  assert.equal(calls[3][1], "测试系统消息");
+  const rereadCall = calls.find((item) => item[0] === "refreshThreadInstructions");
+  assert.equal(rereadCall[1], "thread-1");
+  assert.equal(calls.find((item) => item[0] === "compactThread")[1], "thread-1");
+  assert.equal(calls.find((item) => item[0] === "queueMessage")[1], "测试系统消息");
 });
 
 test("standalone mode rejects mutating thread operations", async () => {

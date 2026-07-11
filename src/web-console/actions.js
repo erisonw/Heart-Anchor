@@ -111,6 +111,28 @@ async function threadCompact({ app, config }) {
   return { message: `已发送压缩请求（thread: ${current.threadId}）` };
 }
 
+// 与聊天里的 /reread 等价：让现有 thread 重读 instructions（人格/规则文件改动后使用）。
+async function threadReread({ app, config }) {
+  requireApp(app);
+  const current = readCurrentThreadState(config);
+  if (!current.bindingKey || !current.workspaceRoot || !current.threadId) {
+    throw new HttpError(400, "当前没有可刷新的 thread。");
+  }
+  const runtimeAdapter = app.runtimeAdapter;
+  if (typeof runtimeAdapter.refreshThreadInstructions !== "function") {
+    throw new HttpError(400, "当前运行时不支持指令刷新。");
+  }
+  const params = runtimeAdapter.getSessionStore()
+    .getRuntimeParamsForWorkspace(current.bindingKey, current.workspaceRoot);
+  await runtimeAdapter.refreshThreadInstructions({
+    threadId: current.threadId,
+    workspaceRoot: current.workspaceRoot,
+    model: params.model,
+    modelProvider: params.modelProvider,
+  });
+  return { message: `指令刷新已发送（thread: ${current.threadId}）` };
+}
+
 function systemSend({ app }, payload) {
   requireApp(app);
   const text = normalizeText(payload?.text);
@@ -496,6 +518,7 @@ module.exports = {
   HttpError,
   threadNew,
   threadCompact,
+  threadReread,
   systemSend,
   saveCheckinRange,
   toggleMcpServer,

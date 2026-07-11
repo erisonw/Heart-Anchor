@@ -12,6 +12,7 @@ const {
   HttpError,
   threadNew,
   threadCompact,
+  threadReread,
   systemSend,
   saveCheckinRange,
   toggleMcpServer,
@@ -135,6 +136,10 @@ async function handleRequest(context, request, response) {
   }
   if (request.method === "POST" && url.pathname === "/api/thread/compact") {
     sendJson(response, 200, { ok: true, ...(await threadCompact(context)) });
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/thread/reread") {
+    sendJson(response, 200, { ok: true, ...(await threadReread(context)) });
     return;
   }
   if (request.method === "POST" && url.pathname === "/api/system/send") {

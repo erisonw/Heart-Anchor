@@ -212,6 +212,7 @@
     $("session-info").innerHTML = kvRows(pairs);
     $("thread-new-btn").disabled = data.mode !== "embedded" || !thread.canStartFresh;
     $("thread-compact-btn").disabled = data.mode !== "embedded" || !thread.canCompact;
+    $("thread-reread-btn").disabled = data.mode !== "embedded" || !thread.threadId;
   }
 
   function renderQueue(data) {
@@ -457,6 +458,11 @@
   $("thread-new-btn").addEventListener("click", async () => {
     if (!confirm("确定开启新会话？当前 thread 会被放下，下一条消息将开新线程。")) return;
     await runAction("/api/thread/new");
+  });
+
+  $("thread-reread-btn").addEventListener("click", async () => {
+    if (!confirm("让当前 thread 重新读取 instructions（人格/规则文件）？")) return;
+    await runAction("/api/thread/reread");
   });
 
   $("thread-compact-btn").addEventListener("click", async () => {

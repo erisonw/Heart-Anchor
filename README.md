@@ -17,6 +17,7 @@ Heart-Anchor 是一个个人 Agent 桥接系统：把 Claude Code / Codex / Anti
 - Android webhook：MacroDroid 事件接入，支持位置、电量、解锁、通知等高价值事件进入 timeline / system trigger。
 - 手表桥接：Galaxy Watch 心率告警、睡眠摘要、久坐提醒等健康事件接入（`clients/galaxy-watch-health-bridge`）。
 - 手机远程命令：云端经 FCM 唤醒手机设置闹钟/计时器（Phone Bridge v1）。
+- Android Edge Runtime v2：独立 `Heart-Anchor Mobile`、二维码配对、每设备凭证、能力注册、离线专注策略、应用使用统计、手机审批与 Accessibility Power Mode。
 - 主动消息系统：check-in、reminder、Android trigger、location trigger 统一进入 system queue。
 - 长期记忆：sqlite 记忆库（确认 / 候选 / 归档三态），词法 + 可选语义（embedding）混合召回、时间衰减、对话上下文感知注入，控制台可视化管理。
 - 项目 MCP 工具：timeline、diary、reminder、memory、file send、sticker、voice、web search、trending、Google 日历/Gmail、Netease music 等能力通过 `heart_anchor_tools` 暴露给运行时。
@@ -37,6 +38,7 @@ Heart-Anchor 是一个个人 Agent 桥接系统：把 Claude Code / Codex / Anti
 - `src/tools/`：项目 MCP tool host 与各类工具注册。
 - `src/web-console/`：内嵌 Web 控制台（模块化 API + 静态前端，详见下文）。
 - `clients/`：设备端配套应用，当前包含 Galaxy Watch health bridge（Kotlin/Gradle）。
+- `clients/heart-anchor-mobile/`：独立 Android 执行节点与设备控制面；不与现有 Watch Bridge 共用包名或状态。
 - `docs/`：架构、命令、Android MacroDroid / 手表接入文档。
 - `test/`：`node:test` 测试套件（300+ 用例），CI 在 push / PR 时自动运行。
 

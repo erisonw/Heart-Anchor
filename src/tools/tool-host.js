@@ -767,7 +767,10 @@ const PROJECT_TOOLS = [
     },
     async handler({ services, args }) {
       assertConfirmed("heart_anchor_android_alarm_set", args);
-      const result = await services.androidCommands.enqueueAlarm({
+      const targetService = services.androidDevices?.getDevice(args.deviceId)
+        ? services.androidDevices
+        : services.androidCommands;
+      const result = await targetService.enqueueAlarm({
         ...args,
         createdBy: "mcp",
       });
@@ -797,7 +800,10 @@ const PROJECT_TOOLS = [
     },
     async handler({ services, args }) {
       assertConfirmed("heart_anchor_android_timer_set", args);
-      const result = await services.androidCommands.enqueueTimer({
+      const targetService = services.androidDevices?.getDevice(args.deviceId)
+        ? services.androidDevices
+        : services.androidCommands;
+      const result = await targetService.enqueueTimer({
         ...args,
         createdBy: "mcp",
       });
@@ -823,11 +829,122 @@ const PROJECT_TOOLS = [
       additionalProperties: false,
     },
     async handler({ services, args }) {
-      const result = services.androidCommands.listCommands(args);
-      const count = Array.isArray(result.commands) ? result.commands.length : 0;
+      const legacy = services.androidCommands.listCommands(args);
+      const commands = services.androidDevices
+        ? [...services.androidDevices.listCommands(args), ...(legacy.commands || [])]
+        : (legacy.commands || []);
+      const result = { commands };
+      const count = commands.length;
       return {
         text: `Android command status returned ${count} command${count === 1 ? "" : "s"}.`,
         data: result,
+      };
+    },
+  },
+  {
+    name: "heart_anchor_android_focus_policy_create",
+    description: "Create a pending Android app-usage focus policy draft. The policy does not become active until the user approves it on the paired phone.",
+    shortHint: "Draft a phone focus policy for on-device approval.",
+    topics: ["android", "phone", "focus", "policy"],
+    inputSchema: {
+      type: "object",
+      required: ["packageNames", "dailyLimitMinutes"],
+      properties: {
+        deviceId: { type: "string", description: "Optional paired Android device id." },
+        title: { type: "string", description: "Human-readable policy title." },
+        packageNames: { type: "array", minItems: 1, items: { type: "string" }, description: "Android package names sharing the limit." },
+        daysOfWeek: { type: "array", items: { type: "integer" }, description: "ISO weekdays 1-7. Defaults to every day." },
+        startTime: { type: "string", description: "Local start time in HH:mm. Defaults to 00:00." },
+        endTime: { type: "string", description: "Local end time in HH:mm. Defaults to 23:59." },
+        timeZone: { type: "string", description: "IANA time zone. Defaults to Asia/Shanghai." },
+        dailyLimitMinutes: { type: "integer", description: "Shared daily limit, 1-1440 minutes." },
+        enforcementMode: { type: "string", description: "observe, remind, or block. Defaults to remind." },
+        warningThresholds: { type: "array", items: { type: "integer" }, description: "Usage-minute thresholds for reminders." },
+        temporaryUnlockMinutes: { type: "integer", description: "Authenticated temporary unlock duration. Defaults to 5." },
+      },
+      additionalProperties: false,
+    },
+    async handler({ services, args }) {
+      const policy = await requireAndroidDevices(services).createFocusPolicy({ ...args, createdBy: "mcp" });
+      return {
+        text: `Android focus policy draft ${policy.policyId} revision ${policy.revision} is waiting for phone approval.`,
+        data: policy,
+      };
+    },
+  },
+  {
+    name: "heart_anchor_android_focus_policy_update",
+    description: "Create a new pending revision of an Android focus policy. The current active revision remains authoritative until the phone approves the replacement.",
+    shortHint: "Revise a phone focus policy for approval.",
+    topics: ["android", "phone", "focus", "policy"],
+    inputSchema: {
+      type: "object",
+      required: ["policyId"],
+      properties: {
+        policyId: { type: "string" },
+        title: { type: "string" },
+        packageNames: { type: "array", minItems: 1, items: { type: "string" } },
+        daysOfWeek: { type: "array", items: { type: "integer" } },
+        startTime: { type: "string" },
+        endTime: { type: "string" },
+        timeZone: { type: "string" },
+        dailyLimitMinutes: { type: "integer" },
+        enforcementMode: { type: "string" },
+        warningThresholds: { type: "array", items: { type: "integer" } },
+        temporaryUnlockMinutes: { type: "integer" },
+        enabled: { type: "boolean" },
+      },
+      additionalProperties: false,
+    },
+    async handler({ services, args }) {
+      const policy = await requireAndroidDevices(services).updateFocusPolicy({ ...args, createdBy: "mcp" });
+      return {
+        text: `Android focus policy ${policy.policyId} revision ${policy.revision} is waiting for phone approval.`,
+        data: policy,
+      };
+    },
+  },
+  {
+    name: "heart_anchor_android_focus_policy_list",
+    description: "List current Android focus policies and their phone approval state.",
+    shortHint: "List phone focus policies.",
+    topics: ["android", "phone", "focus", "policy"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        deviceId: { type: "string" },
+        state: { type: "string", description: "Optional pending_approval, active, paused, rejected, or superseded filter." },
+        includeHistory: { type: "boolean" },
+      },
+      additionalProperties: false,
+    },
+    async handler({ services, args }) {
+      const policies = requireAndroidDevices(services).listFocusPolicies(args);
+      return {
+        text: `Android focus policy list returned ${policies.length} polic${policies.length === 1 ? "y" : "ies"}.`,
+        data: { policies },
+      };
+    },
+  },
+  {
+    name: "heart_anchor_android_focus_policy_pause",
+    description: "Pause one Android focus policy and queue the pause command for the paired phone.",
+    shortHint: "Pause a phone focus policy.",
+    topics: ["android", "phone", "focus", "policy"],
+    inputSchema: {
+      type: "object",
+      required: ["policyId"],
+      properties: {
+        policyId: { type: "string" },
+        deviceId: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    async handler({ services, args }) {
+      const policy = await requireAndroidDevices(services).pauseFocusPolicy({ ...args, createdBy: "mcp" });
+      return {
+        text: `Android focus policy ${policy.policyId} is paused.`,
+        data: policy,
       };
     },
   },
@@ -1546,6 +1663,14 @@ function assertConfirmed(toolName, args) {
   if (args?.confirmed !== true) {
     throw new Error(`${toolName} input.confirmed must be true after explicit user confirmation.`);
   }
+}
+
+function requireAndroidDevices(services) {
+  const service = services?.androidDevices;
+  if (!service) {
+    throw new Error("Android Edge Runtime v2 service is unavailable.");
+  }
+  return service;
 }
 
 function validateSchema(schema, value, toolName, path) {

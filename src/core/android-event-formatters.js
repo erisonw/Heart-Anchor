@@ -263,9 +263,31 @@ function buildAndroidTimelineEvent(event, occurredAt) {
       return buildWatchSedentaryTimelineEvent(base, payload);
     case "watch_battery_low":
       return buildWatchBatteryLowTimelineEvent(base, payload);
+    case "focus_policy_approved":
+    case "focus_policy_rejected":
+    case "focus_policy_paused_local":
+    case "focus_reminder":
+    case "focus_block":
+    case "focus_temporary_unlock":
+    case "phone_action_succeeded":
+    case "phone_action_failed":
+      return buildMobileAgentTimelineEvent(base, payload, eventType);
     default:
       return null;
   }
+}
+
+function buildMobileAgentTimelineEvent(base, payload, eventType) {
+  const label = normalizeText(payload.label || payload.summary || payload.policyTitle) || eventType.replaceAll("_", " ");
+  const policyId = normalizeText(payload.policyId);
+  return {
+    ...base,
+    categoryId: "life",
+    subcategoryId: "life.other",
+    title: label,
+    note: policyId ? `policyId=${policyId}` : "",
+    tags: [...base.tags, "mobile-agent", policyId].filter(Boolean),
+  };
 }
 
 function buildAndroidPlaceTimelineEvent(base, payload) {

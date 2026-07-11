@@ -276,6 +276,32 @@ function createHost() {
           };
         },
       },
+      androidDevices: {
+        getDevice() {
+          return null;
+        },
+        listCommands() {
+          return [];
+        },
+        async createFocusPolicy(args) {
+          return {
+            policyId: "policy-1",
+            revision: 1,
+            state: "pending_approval",
+            enforcementMode: args.enforcementMode || "remind",
+            ...args,
+          };
+        },
+        async updateFocusPolicy(args) {
+          return { policyId: args.policyId, revision: 2, state: "pending_approval", ...args };
+        },
+        listFocusPolicies() {
+          return [{ policyId: "policy-1", revision: 1, state: "pending_approval" }];
+        },
+        async pauseFocusPolicy(args) {
+          return { policyId: args.policyId, revision: 1, state: "paused" };
+        },
+      },
       memory: {
         async searchRanked(args) {
           return this.search(args);
@@ -846,6 +872,30 @@ test("tool host rejects unconfirmed Android alarm and timer tools", async () => 
       confirmed: false,
     }, {});
   }, /input\.confirmed must be true/);
+});
+
+test("tool host creates focus policy drafts that require phone approval", async () => {
+  const host = createHost();
+  const names = host.listTools().map((tool) => tool.name);
+  assert.ok(names.includes("heart_anchor_android_focus_policy_create"));
+  assert.ok(names.includes("heart_anchor_android_focus_policy_update"));
+  assert.ok(names.includes("heart_anchor_android_focus_policy_list"));
+  assert.ok(names.includes("heart_anchor_android_focus_policy_pause"));
+
+  const created = await host.invokeTool("heart_anchor_android_focus_policy_create", {
+    packageNames: ["com.ss.android.ugc.aweme"],
+    dailyLimitMinutes: 20,
+    startTime: "22:00",
+    endTime: "23:59",
+    enforcementMode: "block",
+  }, {});
+  assert.equal(created.data.state, "pending_approval");
+  assert.match(created.text, /waiting for phone approval/);
+
+  const listed = await host.invokeTool("heart_anchor_android_focus_policy_list", {}, {});
+  assert.equal(listed.data.policies.length, 1);
+  const paused = await host.invokeTool("heart_anchor_android_focus_policy_pause", { policyId: "policy-1" }, {});
+  assert.equal(paused.data.state, "paused");
 });
 
 test("tool host exposes long-term memory tools", async () => {

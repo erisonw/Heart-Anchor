@@ -11,6 +11,7 @@ const { MemoryEmbeddingService } = require("../services/memory-embedding-service
 const { createTtsService } = require("../services/tts-service");
 const { ReminderService } = require("../services/reminder-service");
 const { AndroidCommandService } = require("../services/android-command-service");
+const { AndroidDeviceService } = require("../services/android-device-service");
 const { AndroidIngestService } = require("../services/android-ingest-service");
 const { FirebaseMessagingService } = require("../services/firebase-messaging-service");
 const { NeteaseMusicService } = require("../services/netease-music-service");
@@ -44,6 +45,10 @@ function createProjectTooling(config, options = {}) {
     config,
     pushSender: firebaseMessaging,
   });
+  const androidDevices = new AndroidDeviceService({
+    config,
+    pushSender: firebaseMessaging,
+  });
   const services = {
     diary: new DiaryService({ config }),
     tts: createTtsService({ config }),
@@ -58,8 +63,9 @@ function createProjectTooling(config, options = {}) {
     netease: new NeteaseMusicService({ config }),
     voiceTranscoder,
     androidCommands,
+    androidDevices,
     firebaseMessaging,
-    androidIngest: new AndroidIngestService({ config, commandService: androidCommands }),
+    androidIngest: new AndroidIngestService({ config, commandService: androidCommands, deviceService: androidDevices }),
     channelFile,
     sticker: new StickerService({ config, channelAdapter, sessionStore, channelFileService: channelFile }),
     timeline: new TimelineService({ config, timelineIntegration, sessionStore, channelAdapter }),

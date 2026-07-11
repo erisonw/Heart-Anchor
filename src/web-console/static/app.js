@@ -246,11 +246,16 @@
 
   function renderAndroid(data) {
     const android = data.android;
+    const edge = android.edge || { devices: [], policies: [], commands: [] };
+    if (document.activeElement !== $("android-pairing-url") && !$("android-pairing-url").value) {
+      $("android-pairing-url").value = edge.publicBaseUrl || "";
+    }
     $("android-status").innerHTML = kvRows([
       ["Webhook", android.enabled ? '<span class="badge ok">监听中</span>' : '<span class="badge">未启用</span>'],
       ["地址", escapeHtml(android.host + ":" + android.port)],
       ["Token", android.tokenConfigured ? "已设置" : '<span class="badge warn">未设置</span>'],
       ["设备数", String(android.totalDevices)],
+      ["Edge Runtime", String(edge.totalDevices || 0) + " 台设备 · " + String(edge.pendingPairings || 0) + " 个待配对"],
     ]);
     $("android-devices").innerHTML = android.devices.length
       ? android.devices.map((device) =>
@@ -260,6 +265,43 @@
           + ' · 累计接收 ' + device.acceptedCount + '</div></div>'
         ).join("")
       : '<div class="empty">还没有设备上报。</div>';
+    $("android-edge-devices").innerHTML = edge.devices.length
+      ? edge.devices.map((device) => {
+          const capabilityReady = (device.capabilities || []).filter((item) => item.status === "ready").length;
+          const revoked = Boolean(device.revokedAt);
+          return '<div class="item"><div class="title">' + escapeHtml(device.deviceName || device.deviceId)
+            + ' <span class="badge ' + (revoked ? "err" : "ok") + '">' + (revoked ? "已撤销" : "已配对") + '</span>'
+            + (device.commandsPaused ? ' <span class="badge warn">命令暂停</span>' : "")
+            + '</div><div class="meta">' + escapeHtml(device.deviceId)
+            + ' · 能力就绪 ' + capabilityReady + '/' + (device.capabilities || []).length
+            + ' · 最近在线 ' + escapeHtml(fmtTime(device.lastSeenAt)) + '</div>'
+            + (!revoked
+              ? '<div class="actions"><button class="btn ghost android-edge-pause" data-device="' + escapeHtml(device.deviceId)
+                + '" data-paused="' + (!device.commandsPaused) + '" type="button">' + (device.commandsPaused ? "恢复命令" : "暂停命令") + '</button>'
+                + '<button class="btn ghost android-edge-revoke" data-device="' + escapeHtml(device.deviceId) + '" type="button">撤销设备</button></div>'
+              : "")
+            + '</div>';
+        }).join("")
+      : '<div class="empty">还没有 Heart-Anchor Mobile 完成配对。</div>';
+    $("android-focus-policies").innerHTML = edge.policies.length
+      ? edge.policies.map((policy) =>
+          '<div class="item"><div class="title">' + escapeHtml(policy.title || policy.policyId)
+          + ' <span class="badge ' + (policy.state === "active" ? "ok" : policy.state === "pending_approval" ? "warn" : "") + '">'
+          + escapeHtml(policy.state) + '</span></div><div class="meta">'
+          + escapeHtml((policy.packageNames || []).join(", ")) + ' · '
+          + escapeHtml(policy.startTime + "-" + policy.endTime) + ' · 每日 ' + Number(policy.dailyLimitMinutes || 0)
+          + ' 分钟 · ' + escapeHtml(policy.enforcementMode) + ' · rev ' + Number(policy.revision || 0) + '</div></div>'
+        ).join("")
+      : '<div class="empty">还没有专注策略。</div>';
+    $("android-edge-commands").innerHTML = edge.commands.length
+      ? edge.commands.map((command) =>
+          '<div class="item"><div class="title">' + escapeHtml(command.type)
+          + ' <span class="badge ' + (command.status === "succeeded" ? "ok" : command.status === "failed" ? "err" : "") + '">'
+          + escapeHtml(command.status) + '</span></div><div class="meta">'
+          + escapeHtml(command.deviceId) + ' · ' + escapeHtml(fmtTime(command.updatedAt || command.createdAt))
+          + (command.error ? ' · ' + escapeHtml(command.error) : "") + '</div></div>'
+        ).join("")
+      : '<div class="empty">还没有 v2 移动端命令。</div>';
     $("android-events").innerHTML = android.recentEvents.length
       ? android.recentEvents.map((event) =>
           '<div class="item"><div class="title">' + escapeHtml(event.eventType || "event")
@@ -269,6 +311,58 @@
         ).join("")
       : '<div class="empty">还没有事件。</div>';
   }
+
+  $("android-pairing-create").addEventListener("click", async () => {
+    try {
+      const created = await api("/api/android/v2/pairings", {
+        method: "POST",
+        body: JSON.stringify({
+          serverBaseUrl: $("android-pairing-url").value.trim(),
+          deviceName: $("android-pairing-name").value.trim(),
+        }),
+      });
+      const output = $("android-pairing-output");
+      output.classList.remove("hidden");
+      output.innerHTML = created.qrSvg
+        + '<div><div class="title">用 Heart-Anchor Mobile 扫码</div>'
+        + '<div class="meta">有效期至 ' + escapeHtml(fmtTime(created.pairing.expiresAt)) + '</div>'
+        + '<p class="pairing-uri">' + escapeHtml(created.pairing.pairingUri) + '</p></div>';
+      toast(created.message || "配对二维码已生成");
+      await refresh();
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
+
+  document.addEventListener("click", async (event) => {
+    const pauseButton = event.target.closest(".android-edge-pause");
+    if (pauseButton) {
+      try {
+        const result = await api("/api/android/v2/devices/commands-pause", {
+          method: "POST",
+          body: JSON.stringify({ deviceId: pauseButton.dataset.device, paused: pauseButton.dataset.paused === "true" }),
+        });
+        toast(result.message);
+        await refresh();
+      } catch (error) {
+        toast(error.message, true);
+      }
+      return;
+    }
+    const revokeButton = event.target.closest(".android-edge-revoke");
+    if (revokeButton && confirm("确认撤销设备 " + revokeButton.dataset.device + "？手机本地策略不会被删除。")) {
+      try {
+        const result = await api("/api/android/v2/devices/revoke", {
+          method: "POST",
+          body: JSON.stringify({ deviceId: revokeButton.dataset.device }),
+        });
+        toast(result.message);
+        await refresh();
+      } catch (error) {
+        toast(error.message, true);
+      }
+    }
+  });
 
   function renderSettings(data) {
     const basic = data.settings.filter((group) => !group.advanced);

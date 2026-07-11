@@ -60,7 +60,7 @@ function buildConsoleState({ app = null, config }) {
     },
     bindings,
     queue: readQueueState(app, config),
-    android: readAndroidState(config),
+    android: readAndroidState(config, app?.projectServices?.androidDevices),
     mcp: readMcpState(),
     settings: buildSettingsView(envValues),
     logs: app ? getLogBuffer().snapshot(150) : [],
@@ -292,7 +292,7 @@ function readMcpState() {
   };
 }
 
-function readAndroidState(config) {
+function readAndroidState(config, deviceService = null) {
   const parsed = readJsonFile(config.androidDevicesFile, {});
   const devices = parsed.devices && typeof parsed.devices === "object" ? parsed.devices : {};
   const items = Object.values(devices)
@@ -307,6 +307,25 @@ function readAndroidState(config) {
       duplicateCount: Number(item.duplicateCount || 0),
     }))
     .sort((left, right) => Date.parse(right.lastSeenAt || 0) - Date.parse(left.lastSeenAt || 0));
+  let edgeDevices = [];
+  let edgePolicies = [];
+  let edgeCommands = [];
+  let pendingPairings = 0;
+  if (deviceService) {
+    edgeDevices = deviceService.listDevices();
+    edgePolicies = deviceService.listFocusPolicies({});
+    edgeCommands = deviceService.listCommands({ limit: 20 });
+    const edgeState = deviceService.readState();
+    pendingPairings = edgeState.pairings.filter((item) => item.status === "pending").length;
+  } else {
+    const edgeState = readJsonFile(config.androidV2StateFile, {});
+    edgeDevices = Object.values(edgeState.devices || {}).map(({ credentialHash, ...device }) => device);
+    edgePolicies = latestPolicyItems(edgeState.policies || []);
+    edgeCommands = Array.isArray(edgeState.commands) ? edgeState.commands.slice(-20).reverse() : [];
+    pendingPairings = Array.isArray(edgeState.pairings)
+      ? edgeState.pairings.filter((item) => item.status === "pending").length
+      : 0;
+  }
   return {
     enabled: Boolean(config.startWithAndroidWebhook),
     host: normalizeText(config.androidWebhookHost),
@@ -315,7 +334,26 @@ function readAndroidState(config) {
     totalDevices: items.length,
     devices: items.slice(0, 6),
     recentEvents: readRecentAndroidEvents(config.androidEventsFile, 12),
+    edge: {
+      publicBaseUrl: normalizeText(config.androidPublicBaseUrl),
+      allowInsecureHttp: Boolean(config.androidV2AllowInsecureHttp),
+      pendingPairings,
+      totalDevices: edgeDevices.length,
+      devices: edgeDevices,
+      policies: edgePolicies,
+      commands: edgeCommands,
+    },
   };
+}
+
+function latestPolicyItems(items) {
+  const latest = new Map();
+  for (const item of Array.isArray(items) ? items : []) {
+    if (!item || typeof item !== "object") continue;
+    const current = latest.get(item.policyId);
+    if (!current || Number(item.revision || 0) > Number(current.revision || 0)) latest.set(item.policyId, item);
+  }
+  return [...latest.values()];
 }
 
 function readRecentAndroidEvents(filePath, limit = 12) {

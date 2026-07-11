@@ -16,3 +16,4 @@ weixin-instructions-draft.md
 third_party/
 firmware/
 .claude/
+dist/*.apk

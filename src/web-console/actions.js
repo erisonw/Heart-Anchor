@@ -1,4 +1,6 @@
 const fs = require("fs");
+const QRCode = require("qrcode-terminal/vendor/QRCode");
+const QRErrorCorrectLevel = require("qrcode-terminal/vendor/QRCode/QRErrorCorrectLevel");
 
 const { CheckinConfigStore } = require("../core/checkin-config-store");
 const { normalizeText } = require("../core/values");
@@ -13,6 +15,62 @@ function requireApp(app) {
   if (!app) {
     throw new HttpError(409, "该操作需要主进程运行中（cyberboss start）。当前是独立救援模式，只读。");
   }
+}
+
+function getAndroidDeviceService(app) {
+  requireApp(app);
+  const service = app.projectServices?.androidDevices;
+  if (!service) {
+    throw new HttpError(500, "Android Edge Runtime v2 service 不可用。");
+  }
+  return service;
+}
+
+function androidPairingCreate({ app, config }, payload = {}) {
+  const service = getAndroidDeviceService(app);
+  const pairing = service.createPairing({
+    serverBaseUrl: normalizeText(payload.serverBaseUrl) || normalizeText(config.androidPublicBaseUrl),
+    deviceName: normalizeText(payload.deviceName),
+  });
+  return {
+    message: "配对二维码已生成，10 分钟内有效。",
+    pairing,
+    qrSvg: createQrSvg(pairing.pairingUri),
+  };
+}
+
+function androidDeviceRevoke({ app }, payload = {}) {
+  const device = getAndroidDeviceService(app).revokeDevice(normalizeText(payload.deviceId));
+  return { message: `设备 ${device.deviceId} 已撤销。`, device };
+}
+
+function androidCommandsPause({ app }, payload = {}) {
+  const device = getAndroidDeviceService(app).setCommandsPaused(
+    normalizeText(payload.deviceId),
+    Boolean(payload.paused),
+  );
+  return {
+    message: `设备 ${device.deviceId} 的云端命令已${device.commandsPaused ? "暂停" : "恢复"}。`,
+    device,
+  };
+}
+
+function createQrSvg(value) {
+  const qr = new QRCode(-1, QRErrorCorrectLevel.M);
+  qr.addData(String(value || ""));
+  qr.make();
+  const modules = qr.modules || [];
+  const quiet = 4;
+  const size = modules.length + quiet * 2;
+  const cells = [];
+  for (let row = 0; row < modules.length; row += 1) {
+    for (let column = 0; column < modules[row].length; column += 1) {
+      if (modules[row][column]) {
+        cells.push(`<rect x="${column + quiet}" y="${row + quiet}" width="1" height="1"/>`);
+      }
+    }
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" role="img" aria-label="Heart-Anchor 配对二维码"><rect width="${size}" height="${size}" fill="#fff"/><g fill="#111">${cells.join("")}</g></svg>`;
 }
 
 // 线程操作直接复用主进程里的 runtime adapter，与聊天里的 /new /compact 同一条代码路径。
@@ -455,4 +513,7 @@ module.exports = {
   googleExchange,
   neteaseQrCreate,
   neteaseQrCheck,
+  androidPairingCreate,
+  androidDeviceRevoke,
+  androidCommandsPause,
 };

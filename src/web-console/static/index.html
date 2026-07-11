@@ -165,12 +165,38 @@
 
     <section class="panel" id="panel-android">
       <div class="card wide">
+        <h2>Heart-Anchor Mobile 配对 <span class="badge">Edge Runtime v2</span></h2>
+        <p class="hint">输入手机可以访问的 HTTPS 地址，生成一次性二维码。二维码和设备凭证相互独立，10 分钟后失效。</p>
+        <div class="inline-form">
+          <label>服务地址
+            <input id="android-pairing-url" type="url" placeholder="https://agent.example.com" style="min-width:22rem" />
+          </label>
+          <label>设备名
+            <input id="android-pairing-name" type="text" placeholder="S23 Ultra" />
+          </label>
+          <button id="android-pairing-create" class="btn primary" type="button">生成配对二维码</button>
+        </div>
+        <div id="android-pairing-output" class="pairing-output hidden"></div>
+      </div>
+      <div class="card wide">
         <h2>接入状态</h2>
         <div id="android-status" class="kv"></div>
       </div>
       <div class="card wide">
-        <h2>设备</h2>
+        <h2>旧版事件设备</h2>
         <div id="android-devices" class="list"></div>
+      </div>
+      <div class="card wide">
+        <h2>移动端设备</h2>
+        <div id="android-edge-devices" class="list"></div>
+      </div>
+      <div class="card wide">
+        <h2>专注策略</h2>
+        <div id="android-focus-policies" class="list"></div>
+      </div>
+      <div class="card wide">
+        <h2>最近移动端命令</h2>
+        <div id="android-edge-commands" class="list"></div>
       </div>
       <div class="card wide">
         <h2>最近事件</h2>

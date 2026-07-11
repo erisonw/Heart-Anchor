@@ -242,8 +242,24 @@ details#settings-advanced-wrap[open] > summary { color: var(--text); }
 .toast.err { background: var(--err); }
 .toast.hidden { opacity: 0; pointer-events: none; }
 
+.pairing-output {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr;
+  gap: 20px;
+  align-items: center;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.pairing-output.hidden { display: none; }
+.pairing-output svg { width: 100%; height: auto; border-radius: 10px; }
+.pairing-uri { overflow-wrap: anywhere; font-family: var(--mono); font-size: 12px; }
+
 @media (max-width: 640px) {
   main { padding: 12px; }
   .kv { grid-template-columns: 1fr; gap: 0 0; }
   .kv .k { margin-top: 6px; }
+  .pairing-output { grid-template-columns: 1fr; }
 }

@@ -9,6 +9,7 @@ const { AndroidIngestService } = require("../src/services/android-ingest-service
 function createConfig() {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "cyberboss-android-ingest-"));
   return {
+    stateDir,
     androidWebhookToken: "secret",
     androidWebhookHost: "127.0.0.1",
     androidWebhookPort: 4319,
@@ -16,6 +17,9 @@ function createConfig() {
     androidDevicesFile: path.join(stateDir, "android-devices.json"),
     androidCommandQueueFile: path.join(stateDir, "android-commands.json"),
     androidCommandsEnabled: true,
+    androidV2StateFile: path.join(stateDir, "android-v2.json"),
+    androidDefaultDeviceId: "phone-main",
+    androidV2AllowInsecureHttp: true,
   };
 }
 
@@ -107,6 +111,59 @@ test("android ingest handles command registration, polling, ack, and failure end
   assert.deepEqual(polled.body.commands.map((command) => command.commandId), ["cmd-alarm", "cmd-timer"]);
   assert.equal(acked.body.command.status, "acked");
   assert.equal(failed.body.command.status, "failed");
+});
+
+test("android ingest v2 pairs, authenticates and isolates device endpoints", async () => {
+  const service = new AndroidIngestService({ config: createConfig() });
+  const pairing = await invokeJson(service, {
+    method: "POST",
+    path: "/api/android/v2/pairings",
+    body: { serverBaseUrl: "http://127.0.0.1:4319" },
+  });
+  assert.equal(pairing.statusCode, 201);
+  assert.match(pairing.body.pairing.pairingUri, /^heart-anchor:\/\/pair\?/);
+
+  const claimed = await invokeJson(service, {
+    method: "POST",
+    path: `/api/android/v2/pairings/${pairing.body.pairing.pairingId}/claim`,
+    body: {
+      secret: pairing.body.pairing.secret,
+      deviceName: "S23 Ultra",
+      capabilities: [{ key: "usage.read", status: "needs_permission" }],
+    },
+    token: "",
+  });
+  assert.equal(claimed.statusCode, 200);
+  const { device, credential } = claimed.body;
+
+  const capabilities = await invokeJson(service, {
+    method: "POST",
+    path: `/api/android/v2/devices/${device.deviceId}/capabilities`,
+    body: { capabilities: [{ key: "usage.read", status: "ready" }] },
+    token: credential,
+  });
+  assert.equal(capabilities.statusCode, 200);
+  assert.equal(capabilities.body.device.capabilities[0].status, "ready");
+
+  await assert.rejects(() => invokeJson(service, {
+    method: "GET",
+    path: `/api/android/v2/devices/${device.deviceId}/commands`,
+    token: "wrong",
+  }), (error) => error?.statusCode === 401);
+
+  const event = await invokeJson(service, {
+    method: "POST",
+    path: `/api/android/v2/devices/${device.deviceId}/events`,
+    body: {
+      eventId: "focus-event-1",
+      eventType: "focus_block",
+      occurredAt: "2026-07-11T22:30:00+08:00",
+      payload: { label: "已拦截抖音", policyId: "policy-1" },
+    },
+    token: credential,
+  });
+  assert.equal(event.statusCode, 200);
+  assert.equal(event.body.eventId, "focus-event-1");
 });
 
 async function invokeJson(service, { method, path, body, token = "secret" }) {

@@ -4,15 +4,17 @@ const http = require("http");
 const path = require("path");
 const { URL } = require("url");
 const { AndroidCommandService } = require("./android-command-service");
+const { AndroidDeviceService } = require("./android-device-service");
 
 const DEFAULT_DUPLICATE_WINDOW_MS = 30_000;
 const DEFAULT_MAX_REQUEST_BYTES = 256 * 1024;
 const DEFAULT_SEEN_EVENT_LIMIT = 2000;
 
 class AndroidIngestService {
-  constructor({ config, commandService = null }) {
+  constructor({ config, commandService = null, deviceService = null }) {
     this.config = config;
     this.commandService = commandService || new AndroidCommandService({ config });
+    this.deviceService = deviceService || new AndroidDeviceService({ config });
     this.server = null;
     this.onAccepted = null;
   }
@@ -30,7 +32,7 @@ class AndroidIngestService {
     this.onAccepted = typeof onAccepted === "function" ? onAccepted : null;
     this.server = http.createServer((request, response) => {
       this.handleRequest(request, response).catch((error) => {
-        sendJson(response, error instanceof RequestError ? error.statusCode : 500, {
+        sendJson(response, Number(error?.statusCode) || 500, {
           ok: false,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -152,6 +154,127 @@ class AndroidIngestService {
       sendJson(response, 200, {
         ok: true,
         command,
+      });
+      return;
+    }
+    if (request.method === "POST" && url.pathname === "/api/android/v2/pairings") {
+      this.assertAuthorized(request);
+      const body = await readJsonBody(request);
+      sendJson(response, 201, {
+        ok: true,
+        pairing: this.deviceService.createPairing(body),
+      });
+      return;
+    }
+    const pairingClaimMatch = url.pathname.match(/^\/api\/android\/v2\/pairings\/([^/]+)\/claim$/);
+    if (request.method === "POST" && pairingClaimMatch) {
+      const body = await readJsonBody(request);
+      sendJson(response, 200, {
+        ok: true,
+        ...this.deviceService.claimPairing({
+          ...body,
+          pairingId: decodeURIComponent(pairingClaimMatch[1]),
+        }),
+      });
+      return;
+    }
+    const deviceHeartbeatMatch = url.pathname.match(/^\/api\/android\/v2\/devices\/([^/]+)\/heartbeat$/);
+    if (request.method === "POST" && deviceHeartbeatMatch) {
+      const body = await readJsonBody(request);
+      const deviceId = decodeURIComponent(deviceHeartbeatMatch[1]);
+      sendJson(response, 200, {
+        ok: true,
+        device: this.deviceService.heartbeat({
+          ...body,
+          deviceId,
+          credential: extractBearerToken(request.headers?.authorization),
+        }),
+      });
+      return;
+    }
+    const deviceCapabilitiesMatch = url.pathname.match(/^\/api\/android\/v2\/devices\/([^/]+)\/capabilities$/);
+    if (request.method === "POST" && deviceCapabilitiesMatch) {
+      const body = await readJsonBody(request);
+      const deviceId = decodeURIComponent(deviceCapabilitiesMatch[1]);
+      sendJson(response, 200, {
+        ok: true,
+        device: this.deviceService.updateCapabilities({
+          ...body,
+          deviceId,
+          credential: extractBearerToken(request.headers?.authorization),
+        }),
+      });
+      return;
+    }
+    const deviceCommandsMatch = url.pathname.match(/^\/api\/android\/v2\/devices\/([^/]+)\/commands$/);
+    if (request.method === "GET" && deviceCommandsMatch) {
+      const deviceId = decodeURIComponent(deviceCommandsMatch[1]);
+      sendJson(response, 200, {
+        ok: true,
+        ...this.deviceService.pollCommands({
+          deviceId,
+          credential: extractBearerToken(request.headers?.authorization),
+          limit: url.searchParams.get("limit") || "",
+        }),
+      });
+      return;
+    }
+    const devicePoliciesMatch = url.pathname.match(/^\/api\/android\/v2\/devices\/([^/]+)\/policies$/);
+    if (request.method === "GET" && devicePoliciesMatch) {
+      const deviceId = decodeURIComponent(devicePoliciesMatch[1]);
+      sendJson(response, 200, {
+        ok: true,
+        policies: this.deviceService.listDevicePolicies({
+          deviceId,
+          credential: extractBearerToken(request.headers?.authorization),
+        }),
+      });
+      return;
+    }
+    const deviceEventsMatch = url.pathname.match(/^\/api\/android\/v2\/devices\/([^/]+)\/events$/);
+    if (request.method === "POST" && deviceEventsMatch) {
+      const body = await readJsonBody(request);
+      const deviceId = decodeURIComponent(deviceEventsMatch[1]);
+      this.deviceService.authenticateDevice({
+        deviceId,
+        credential: extractBearerToken(request.headers?.authorization),
+      });
+      const result = this.acceptEvent({ ...body, deviceId }, {
+        remoteAddress: normalizeText(request.socket?.remoteAddress),
+      });
+      sendJson(response, 200, {
+        ok: true,
+        duplicate: result.duplicate,
+        eventId: result.event.eventId,
+        receivedAt: result.event.receivedAt,
+      });
+      if (!result.duplicate && this.onAccepted) {
+        Promise.resolve(this.onAccepted(result)).catch((error) => {
+          const message = error instanceof Error ? error.stack || error.message : String(error);
+          console.error(`[heart-anchor] android v2 event callback failed ${message}`);
+        });
+      }
+      return;
+    }
+    const commandResultMatch = url.pathname.match(/^\/api\/android\/v2\/commands\/([^/]+)\/result$/);
+    if (request.method === "POST" && commandResultMatch) {
+      const body = await readJsonBody(request);
+      sendJson(response, 200, {
+        ok: true,
+        command: this.deviceService.recordCommandResult({
+          ...body,
+          commandId: decodeURIComponent(commandResultMatch[1]),
+          credential: extractBearerToken(request.headers?.authorization),
+        }),
+      });
+      return;
+    }
+    const deviceDeleteMatch = url.pathname.match(/^\/api\/android\/v2\/devices\/([^/]+)$/);
+    if (request.method === "DELETE" && deviceDeleteMatch) {
+      this.assertAuthorized(request);
+      sendJson(response, 200, {
+        ok: true,
+        device: this.deviceService.revokeDevice(decodeURIComponent(deviceDeleteMatch[1])),
       });
       return;
     }

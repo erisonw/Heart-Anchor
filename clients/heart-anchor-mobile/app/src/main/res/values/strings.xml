@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Heart-Anchor Mobile</string>
+    <string name="accessibility_description">仅监听前台应用包名，用于执行你已确认的专注提醒和限制；不会读取或上传界面正文。</string>
+</resources>

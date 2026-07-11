@@ -29,6 +29,9 @@ const {
   googleExchange,
   neteaseQrCreate,
   neteaseQrCheck,
+  androidPairingCreate,
+  androidDeviceRevoke,
+  androidCommandsPause,
 } = require("./actions");
 
 const STATIC_DIR = path.join(__dirname, "static");
@@ -69,7 +72,7 @@ async function createWebConsoleServer({ app = null, config, host, port, token = 
   const context = { app, config, token: normalizeText(token) };
   const server = http.createServer((request, response) => {
     handleRequest(context, request, response).catch((error) => {
-      const statusCode = error instanceof HttpError ? error.statusCode : 500;
+      const statusCode = Number(error?.statusCode) || 500;
       sendJson(response, statusCode, {
         error: error instanceof Error ? error.message : String(error),
       });
@@ -216,6 +219,21 @@ async function handleRequest(context, request, response) {
   if (request.method === "POST" && url.pathname === "/api/integrations/netease/qr-check") {
     const body = await readJsonBody(request);
     sendJson(response, 200, { ok: true, ...(await neteaseQrCheck(context, body)) });
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/android/v2/pairings") {
+    const body = await readJsonBody(request);
+    sendJson(response, 201, { ok: true, ...androidPairingCreate(context, body) });
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/android/v2/devices/revoke") {
+    const body = await readJsonBody(request);
+    sendJson(response, 200, { ok: true, ...androidDeviceRevoke(context, body) });
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/android/v2/devices/commands-pause") {
+    const body = await readJsonBody(request);
+    sendJson(response, 200, { ok: true, ...androidCommandsPause(context, body) });
     return;
   }
 

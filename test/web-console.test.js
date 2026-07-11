@@ -12,6 +12,7 @@ process.env.CYBERBOSS_STATE_DIR = path.join(TMP_ROOT, "state");
 const { LogBuffer } = require("../src/web-console/log-buffer");
 const envStore = require("../src/web-console/env-store");
 const { createWebConsoleServer } = require("../src/web-console/server");
+const { AndroidDeviceService } = require("../src/services/android-device-service");
 
 function createConfig(stateDir) {
   fs.mkdirSync(stateDir, { recursive: true });
@@ -31,6 +32,10 @@ function createConfig(stateDir) {
     reminderQueueFile: path.join(stateDir, "reminder-queue.json"),
     checkinConfigFile: path.join(stateDir, "checkin-config.json"),
     androidDevicesFile: path.join(stateDir, "android-devices.json"),
+    androidV2StateFile: path.join(stateDir, "android-v2.json"),
+    androidPublicBaseUrl: "http://127.0.0.1:4319",
+    androidV2AllowInsecureHttp: true,
+    androidDefaultDeviceId: "phone-main",
     androidEventsFile: path.join(stateDir, "android-events.jsonl"),
     androidWebhookHost: "0.0.0.0",
     androidWebhookPort: 4319,
@@ -98,6 +103,7 @@ function createFakeApp(config, calls) {
       getLatestContext: () => null,
     },
     projectServices: {
+      androidDevices: new AndroidDeviceService({ config }),
       system: {
         queueMessage: ({ text }) => {
           calls.push(["queueMessage", text]);
@@ -357,6 +363,44 @@ test("standalone mode rejects mutating thread operations", async () => {
     assert.equal(deniedSend.status, 409);
     const stateOk = await fetch(`${base}/api/state`);
     assert.equal(stateOk.status, 200);
+  });
+});
+
+test("web console creates pairing QR and manages Android edge devices", async () => {
+  const config = createConfig(path.join(TMP_ROOT, "state-android-edge"));
+  const app = createFakeApp(config, []);
+  await withServer({ app, config }, async (base) => {
+    const pairingResponse = await fetch(`${base}/api/android/v2/pairings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceName: "S23 Ultra" }),
+    });
+    assert.equal(pairingResponse.status, 201);
+    const pairingBody = await pairingResponse.json();
+    assert.match(pairingBody.qrSvg, /^<svg/);
+    assert.match(pairingBody.pairing.pairingUri, /^heart-anchor:\/\/pair/);
+
+    const claimed = app.projectServices.androidDevices.claimPairing({
+      pairingId: pairingBody.pairing.pairingId,
+      secret: pairingBody.pairing.secret,
+      deviceName: "S23 Ultra",
+    });
+    const state = await (await fetch(`${base}/api/state`)).json();
+    assert.equal(state.android.edge.devices.length, 1);
+    assert.equal(state.android.edge.devices[0].credentialHash, undefined);
+
+    const paused = await fetch(`${base}/api/android/v2/devices/commands-pause`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceId: claimed.device.deviceId, paused: true }),
+    });
+    assert.equal(paused.status, 200);
+    const revoked = await fetch(`${base}/api/android/v2/devices/revoke`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceId: claimed.device.deviceId }),
+    });
+    assert.equal(revoked.status, 200);
   });
 });
 

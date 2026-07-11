@@ -187,6 +187,8 @@ const FIELD_GROUPS = [
       field("HEART_ANCHOR_ANDROID_WEBHOOK_HOST", "Host"),
       field("HEART_ANCHOR_ANDROID_WEBHOOK_PORT", "端口", { inputMode: "numeric" }),
       field("HEART_ANCHOR_ANDROID_WEBHOOK_TOKEN", "Token", { secret: true }),
+      field("HEART_ANCHOR_ANDROID_PUBLIC_BASE_URL", "移动端公开地址", { placeholder: "https://agent.example.com", description: "Heart-Anchor Mobile 二维码配对和 v2 API 使用的 HTTPS 地址。" }),
+      field("HEART_ANCHOR_ANDROID_V2_ALLOW_INSECURE_HTTP", "允许 v2 使用 HTTP", { kind: "select", options: ["", "true", "false"], description: "仅用于本机或局域网调试，正式设备配对应保持关闭。" }),
     ],
   },
   {

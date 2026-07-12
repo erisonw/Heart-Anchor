@@ -387,4 +387,4 @@ Heart-Anchor 需要 `occurredAt` 是 ISO 风格时间。
 
 配 payload 时，可以同时参考：
 
-- [android-macrodroid-webhook-templates.md](file:///Users/erison/cyberboss/docs/android-macrodroid-webhook-templates.md)
+- [android-macrodroid-webhook-templates.md](./android-macrodroid-webhook-templates.md)

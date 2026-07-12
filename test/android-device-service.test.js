@@ -153,3 +153,51 @@ test("focus policies remain pending until the phone approves them", async () => 
   assert.equal(finalHistory.find((item) => item.revision === 2).state, "active");
   assert.equal(finalHistory.find((item) => item.revision === 1).state, "superseded");
 });
+
+test("android v2 prunes old terminal history without removing active commands", () => {
+  const { service } = setup({ now: "2026-08-20T00:00:00.000Z" });
+  const recentTerminal = Array.from({ length: 1_002 }, (_, index) => ({
+    commandId: `phone-terminal-${index}`,
+    deviceId: "phone-main",
+    status: "succeeded",
+    createdAt: `2026-08-19T00:${String(index % 60).padStart(2, "0")}:00.000Z`,
+    updatedAt: `2026-08-19T00:${String(index % 60).padStart(2, "0")}:00.000Z`,
+  }));
+  service.writeState({
+    commands: [
+      {
+        commandId: "active-old",
+        deviceId: "phone-main",
+        status: "queued",
+        createdAt: "2025-01-01T00:00:00.000Z",
+        expiresAt: "2027-01-01T00:00:00.000Z",
+      },
+      {
+        commandId: "terminal-old",
+        deviceId: "phone-main",
+        status: "failed",
+        createdAt: "2026-07-01T00:00:00.000Z",
+        updatedAt: "2026-07-01T00:00:00.000Z",
+      },
+      ...recentTerminal,
+      {
+        commandId: "tablet-terminal",
+        deviceId: "tablet-main",
+        status: "succeeded",
+        createdAt: "2026-08-19T00:00:00.000Z",
+      },
+    ],
+    pairings: [
+      { pairingId: "pending-current", status: "pending", createdAt: "2026-08-20T00:00:00.000Z", expiresAt: "2026-08-20T00:10:00.000Z" },
+      { pairingId: "claimed-old", status: "claimed", claimedAt: "2026-08-01T00:00:00.000Z" },
+      { pairingId: "claimed-recent", status: "claimed", claimedAt: "2026-08-19T00:00:00.000Z" },
+    ],
+  });
+
+  const state = service.readState();
+  assert.ok(state.commands.some((command) => command.commandId === "active-old"));
+  assert.ok(!state.commands.some((command) => command.commandId === "terminal-old"));
+  assert.equal(state.commands.filter((command) => command.deviceId === "phone-main" && command.status === "succeeded").length, 1_000);
+  assert.equal(state.commands.filter((command) => command.deviceId === "tablet-main").length, 1);
+  assert.deepEqual(state.pairings.map((pairing) => pairing.pairingId), ["pending-current", "claimed-recent"]);
+});

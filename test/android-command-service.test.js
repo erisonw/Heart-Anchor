@@ -119,3 +119,46 @@ test("android command service deduplicates caller-provided command ids", async (
   assert.equal(second.duplicate, true);
   assert.equal(service.listCommands({ deviceId: "phone-main" }).commands.length, 1);
 });
+
+test("android v1 prunes terminal history per device while retaining active commands", () => {
+  const { service } = setupService({ now: "2026-08-20T00:00:00.000Z" });
+  const recentTerminal = Array.from({ length: 1_002 }, (_, index) => ({
+    commandId: `phone-terminal-${index}`,
+    deviceId: "phone-main",
+    status: "acked",
+    createdAt: `2026-08-19T00:${String(index % 60).padStart(2, "0")}:00.000Z`,
+    updatedAt: `2026-08-19T00:${String(index % 60).padStart(2, "0")}:00.000Z`,
+  }));
+  service.writeState({
+    devices: {},
+    commands: [
+      {
+        commandId: "active-old",
+        deviceId: "phone-main",
+        status: "queued",
+        createdAt: "2025-01-01T00:00:00.000Z",
+        expiresAt: "2027-01-01T00:00:00.000Z",
+      },
+      {
+        commandId: "terminal-old",
+        deviceId: "phone-main",
+        status: "failed",
+        createdAt: "2026-07-01T00:00:00.000Z",
+        updatedAt: "2026-07-01T00:00:00.000Z",
+      },
+      ...recentTerminal,
+      {
+        commandId: "tablet-terminal",
+        deviceId: "tablet-main",
+        status: "acked",
+        createdAt: "2026-08-19T00:00:00.000Z",
+      },
+    ],
+  });
+
+  const state = service.readState();
+  assert.ok(state.commands.some((command) => command.commandId === "active-old"));
+  assert.ok(!state.commands.some((command) => command.commandId === "terminal-old"));
+  assert.equal(state.commands.filter((command) => command.deviceId === "phone-main" && command.status === "acked").length, 1_000);
+  assert.equal(state.commands.filter((command) => command.deviceId === "tablet-main").length, 1);
+});

@@ -284,7 +284,7 @@ class AndroidIngestService {
   assertAuthorized(request) {
     const expected = normalizeText(this.config.androidWebhookToken);
     const provided = extractBearerToken(request.headers?.authorization);
-    if (!expected || !provided || provided !== expected) {
+    if (!safeTokenEquals(provided, expected)) {
       throw new RequestError(401, "Unauthorized Android webhook request.");
     }
   }
@@ -630,6 +630,17 @@ function hashFingerprint(value) {
   return crypto.createHash("sha1").update(JSON.stringify(value)).digest("hex");
 }
 
+function safeTokenEquals(provided, expected) {
+  const left = normalizeText(provided);
+  const right = normalizeText(expected);
+  if (!left || !right) {
+    return false;
+  }
+  const leftDigest = crypto.createHash("sha256").update(left, "utf8").digest();
+  const rightDigest = crypto.createHash("sha256").update(right, "utf8").digest();
+  return crypto.timingSafeEqual(leftDigest, rightDigest);
+}
+
 class RequestError extends Error {
   constructor(statusCode, message) {
     super(message);
@@ -637,4 +648,4 @@ class RequestError extends Error {
   }
 }
 
-module.exports = { AndroidIngestService };
+module.exports = { AndroidIngestService, safeTokenEquals };

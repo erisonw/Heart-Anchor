@@ -5,6 +5,10 @@ const path = require("path");
 const PROTOCOL_VERSION = 2;
 const PAIRING_TTL_MS = 10 * 60_000;
 const COMMAND_TTL_MS = 10 * 60_000;
+const TERMINAL_COMMAND_RETENTION_MS = 30 * 24 * 60 * 60_000;
+const PAIRING_RETENTION_MS = 7 * 24 * 60 * 60_000;
+const MAX_TERMINAL_COMMANDS_PER_DEVICE = 1_000;
+const TERMINAL_COMMAND_STATES = new Set(["succeeded", "failed", "denied", "expired", "cancelled"]);
 const CAPABILITY_STATES = new Set(["ready", "needs_permission", "disabled", "unsupported"]);
 const COMMAND_STATES = new Set([
   "queued",
@@ -461,7 +465,10 @@ class AndroidDeviceService {
   writeState(state) {
     fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
     const normalized = normalizeState(state);
-    normalized.updatedAt = this.nowIso();
+    const now = this.nowIso();
+    this.expireState(normalized, now);
+    pruneRetainedState(normalized, now);
+    normalized.updatedAt = now;
     const temporary = `${this.filePath}.${process.pid}.tmp`;
     fs.writeFileSync(temporary, JSON.stringify(normalized, null, 2));
     fs.renameSync(temporary, this.filePath);
@@ -484,6 +491,47 @@ function normalizeState(value) {
     commands: Array.isArray(value?.commands) ? value.commands : [],
     policies: Array.isArray(value?.policies) ? value.policies : [],
   };
+}
+
+function pruneRetainedState(state, now) {
+  const nowMs = Date.parse(now);
+  if (!Number.isFinite(nowMs)) return;
+  const commandCutoff = nowMs - TERMINAL_COMMAND_RETENTION_MS;
+  const pairingCutoff = nowMs - PAIRING_RETENTION_MS;
+
+  const nonTerminal = [];
+  const terminalByDevice = new Map();
+  for (const command of state.commands) {
+    if (!TERMINAL_COMMAND_STATES.has(normalizeText(command?.status))) {
+      nonTerminal.push(command);
+      continue;
+    }
+    const updatedMs = Date.parse(normalizeText(command?.updatedAt) || normalizeText(command?.createdAt));
+    if (!Number.isFinite(updatedMs) || updatedMs < commandCutoff) continue;
+    const deviceId = normalizeText(command?.deviceId) || "unknown-device";
+    const items = terminalByDevice.get(deviceId) || [];
+    items.push(command);
+    terminalByDevice.set(deviceId, items);
+  }
+  const retainedTerminal = [];
+  for (const items of terminalByDevice.values()) {
+    items.sort((left, right) => commandTimestamp(right) - commandTimestamp(left));
+    retainedTerminal.push(...items.slice(0, MAX_TERMINAL_COMMANDS_PER_DEVICE));
+  }
+  state.commands = [...nonTerminal, ...retainedTerminal]
+    .sort((left, right) => commandTimestamp(left) - commandTimestamp(right));
+
+  state.pairings = state.pairings.filter((pairing) => {
+    if (pairing?.status === "pending") return true;
+    const reference = normalizeText(pairing?.claimedAt) || normalizeText(pairing?.expiresAt) || normalizeText(pairing?.createdAt);
+    const referenceMs = Date.parse(reference);
+    return !Number.isFinite(referenceMs) || referenceMs >= pairingCutoff;
+  });
+}
+
+function commandTimestamp(command) {
+  const parsed = Date.parse(normalizeText(command?.updatedAt) || normalizeText(command?.createdAt));
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function normalizeCapabilities(value) {

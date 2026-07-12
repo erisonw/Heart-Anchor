@@ -5,6 +5,9 @@ const path = require("path");
 const DEFAULT_EXPIRES_MS = 10 * 60_000;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
+const TERMINAL_COMMAND_RETENTION_MS = 30 * 24 * 60 * 60_000;
+const MAX_TERMINAL_COMMANDS_PER_DEVICE = 1_000;
+const TERMINAL_COMMAND_STATES = new Set(["acked", "failed", "expired"]);
 
 class AndroidCommandService {
   constructor({ config = {}, now = () => new Date().toISOString(), pushSender = null } = {}) {
@@ -318,7 +321,10 @@ class AndroidCommandService {
       throw new Error("Android command queue file is not configured.");
     }
     const normalized = normalizeState(state);
-    normalized.updatedAt = this.nowIso();
+    const nowIso = this.nowIso();
+    this.expireCommandsInState(normalized, nowIso);
+    pruneRetainedCommands(normalized, nowIso);
+    normalized.updatedAt = nowIso;
     fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
     fs.writeFileSync(this.filePath, JSON.stringify(normalized, null, 2));
   }
@@ -340,6 +346,38 @@ function normalizeState(value) {
       : {},
     commands: Array.isArray(value?.commands) ? value.commands : [],
   };
+}
+
+function pruneRetainedCommands(state, nowIso) {
+  const nowMs = Date.parse(nowIso);
+  if (!Number.isFinite(nowMs)) return;
+  const cutoff = nowMs - TERMINAL_COMMAND_RETENTION_MS;
+  const active = [];
+  const terminalByDevice = new Map();
+  for (const command of state.commands) {
+    if (!TERMINAL_COMMAND_STATES.has(normalizeText(command?.status))) {
+      active.push(command);
+      continue;
+    }
+    const timestamp = commandTimestamp(command);
+    if (!timestamp || timestamp < cutoff) continue;
+    const deviceId = normalizeText(command?.deviceId) || "unknown-device";
+    const items = terminalByDevice.get(deviceId) || [];
+    items.push(command);
+    terminalByDevice.set(deviceId, items);
+  }
+  const retainedTerminal = [];
+  for (const items of terminalByDevice.values()) {
+    items.sort((left, right) => commandTimestamp(right) - commandTimestamp(left));
+    retainedTerminal.push(...items.slice(0, MAX_TERMINAL_COMMANDS_PER_DEVICE));
+  }
+  state.commands = [...active, ...retainedTerminal]
+    .sort((left, right) => commandTimestamp(left) - commandTimestamp(right));
+}
+
+function commandTimestamp(command) {
+  const parsed = Date.parse(normalizeText(command?.updatedAt) || normalizeText(command?.createdAt));
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function normalizeText(value) {

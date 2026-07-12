@@ -4,7 +4,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const { AndroidIngestService } = require("../src/services/android-ingest-service");
+const { AndroidIngestService, safeTokenEquals } = require("../src/services/android-ingest-service");
 
 function createConfig() {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "cyberboss-android-ingest-"));
@@ -22,6 +22,14 @@ function createConfig() {
     androidV2AllowInsecureHttp: true,
   };
 }
+
+test("webhook token comparison rejects mismatches without plain string equality", () => {
+  assert.equal(safeTokenEquals("secret", "secret"), true);
+  assert.equal(safeTokenEquals("secret-prefix", "secret"), false);
+  assert.equal(safeTokenEquals("wrong", "secret"), false);
+  assert.equal(safeTokenEquals("", "secret"), false);
+  assert.equal(safeTokenEquals(undefined, "secret"), false);
+});
 
 test("acceptEvent summarizes watch sleep summary aliases with duration and score", () => {
   const service = new AndroidIngestService({ config: createConfig() });

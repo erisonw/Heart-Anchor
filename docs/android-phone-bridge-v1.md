@@ -112,6 +112,8 @@ clients/galaxy-watch-health-bridge/app/google-services.json
 6. 执行成功后 ack；失败后 fail。
 7. 过期命令会转为 `expired`。
 
+非终态命令不会被自动清理；`acked`、`failed`、`expired` 终态命令保留 30 天，并按每台设备最多 1000 条限制。
+
 ## 5. V1 边界
 
 v1 只允许：

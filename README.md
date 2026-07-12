@@ -1,105 +1,151 @@
 # Heart-Anchor
 
+**让 Agent 不只聊天，而是持续理解你的生活，并通过手机与个人工具真正执行任务。**
+
+Connect Claude Code, Codex, Telegram, WeChat and Android into one personal life-operations agent.
+
+[![CI](https://github.com/erisonw/Heart-Anchor/actions/workflows/ci.yml/badge.svg)](https://github.com/erisonw/Heart-Anchor/actions/workflows/ci.yml)
 [![Node >=22](https://img.shields.io/badge/Node-22%2B-3C873A)](./package.json)
+[![Android API 29+](https://img.shields.io/badge/Android-API%2029%2B-3DDC84)](./clients/heart-anchor-mobile)
 [![License: AGPLv3](https://img.shields.io/badge/License-AGPLv3-b31b1b)](./LICENSE)
 
-Heart-Anchor 是一个个人 Agent 桥接系统：把 Claude Code / Codex / Antigravity CLI 这类本地运行时接到聊天入口、系统事件、时间线、提醒、记忆、音乐、语音和 Web 控制台上，让模型不只是”回答问题”，而是能围绕一个真实用户的日常上下文持续工作。
+[快速开始](#五分钟启动) · [Android Edge Runtime](#android-edge-runtime) · [安全模型](#安全与控制权) · [文档导航](#文档导航)
 
-本仓库是基于 [WenXiaoWendy/cyberboss](https://github.com/WenXiaoWendy/cyberboss) 的二次开发版本，曾用名 / 内部代号 `cyberboss`（部分内部标识如 MCP 工具名仍沿用）。历史环境变量前缀 `CYBERBOSS_*` 与旧状态目录 `~/.cyberboss` 完全向后兼容，老部署无需迁移。当前目标不是做通用聊天机器人，而是做一个可长期常驻、可主动触发、可接入手机事件和个人工具链的 life operations agent。
+<!-- README_MEDIA: 在这里加入项目总览 GIF，建议路径 assets/readme/hero-demo.gif。 -->
 
-## 当前能力
+Heart-Anchor 是一个可自托管的个人 Agent 桥接系统。云端或本机 Agent 负责理解、记忆和规划，Android 执行节点负责持有设备权限、离线执行规则并回传结果；Telegram、WeChat 和 Web Console 则提供随手可用的控制入口。
 
-- 多入口聊天桥接：WeChat 与 Telegram channel adapter。
-- 多运行时：Codex、Claude Code、Antigravity CLI MVP。
-- Claude Code 深度适配：MCP 注入、审批流、上下文状态、重复事件抑制、`/stop`、`/compact`、`/switch`。
-- Telegram Bot API：文本、文件、音频、附件下载，支持 `curl` transport 以绕过本机 Node fetch 网络抖动。
-- WeChat 桥接：扫码登录、长轮询、分片发送、文件发送、语音转码尝试。
-- Android webhook：MacroDroid 事件接入，支持位置、电量、解锁、通知等高价值事件进入 timeline / system trigger。
-- 手表桥接：Galaxy Watch 心率告警、睡眠摘要、久坐提醒等健康事件接入（`clients/galaxy-watch-health-bridge`）。
-- 手机远程命令：云端经 FCM 唤醒手机设置闹钟/计时器（Phone Bridge v1）。
-- Android Edge Runtime v2：独立 `Heart-Anchor Mobile`、二维码配对、每设备凭证、能力注册、离线专注策略、应用使用统计、手机审批与 Accessibility Power Mode。
-- 主动消息系统：check-in、reminder、Android trigger、location trigger 统一进入 system queue。
-- 长期记忆：sqlite 记忆库（确认 / 候选 / 归档三态），词法 + 可选语义（embedding）混合召回、时间衰减、对话上下文感知注入，控制台可视化管理。
-- 项目 MCP 工具：timeline、diary、reminder、memory、file send、sticker、voice、web search、trending、Google 日历/Gmail、Netease music 等能力通过 `heart_anchor_tools` 暴露给运行时。
-- 网易云音乐：扫码/手动 cookie 登录、搜索、播放 URL、歌词、歌单、日推、私人 FM、喜欢列表等约 30 个工具。
-- 可切换 TTS：ElevenLabs / OpenAI-compatible 或阿里云百炼 CosyVoice，配合 channel file / voice 工具发送。
-- Web 控制台：随主进程内嵌启动，提供运行总览（含上下文用量）、会话操作、消息队列、记忆浏览器、集成授权（Google OAuth / 网易云扫码）、实时日志流和分级设置面板。
+它不是另一个聊天 UI，而是把 Agent 接入真实工作区、手机能力和个人上下文的运行层。
 
-## 技术栈
+## 一个真实场景
 
-一句话版：Heart-Anchor 是一个 Node.js CommonJS 编写的多 channel / 多 runtime Agent bridge，通过 MCP tool host、长轮询消息桥、system queue、timeline-for-agent 与本地状态存储，把 Claude Code/Codex 接进 Telegram、WeChat、Android webhook 和个人自动化工具链。
+你在 Telegram 或微信中说：
 
-主要模块：
+> 今晚十点后抖音最多使用二十分钟，明早七点半叫我。
 
-- `src/core/`：应用编排、配置、命令、队列、turn gate、stream delivery、Android 事件格式化。
-- `src/adapters/channel/`：聊天入口适配器，当前包含 `weixin` 和 `telegram`。
-- `src/adapters/runtime/`：运行时适配器，当前包含 `codex`、`claudecode`、`antigravity`。
-- `src/services/`：Android ingest、timeline、diary、reminder、memory、TTS、Google Calendar/Gmail、Netease music、web search、voice transcode 等服务。
-- `src/tools/`：项目 MCP tool host 与各类工具注册。
-- `src/web-console/`：内嵌 Web 控制台（模块化 API + 静态前端，详见下文）。
-- `clients/`：设备端配套应用，当前包含 Galaxy Watch health bridge（Kotlin/Gradle）。
-- `clients/heart-anchor-mobile/`：独立 Android 执行节点与设备控制面；不与现有 Watch Bridge 共用包名或状态。
-- `docs/`：架构、命令、Android MacroDroid / 手表接入文档。
-- `test/`：`node:test` 测试套件（300+ 用例），CI 在 push / PR 时自动运行。
+Heart-Anchor 可以把这句话拆成两个可执行动作：
 
-## 安装
+1. 创建一条等待手机确认的专注策略。
+2. 向已配对手机下发七点半的闹钟命令。
+3. 手机确认策略后，本地持续统计使用时长；即使暂时断网，提醒或限制仍可执行。
+4. 执行、失败、绕过和临时解锁均进入可审计记录。
 
-要求：
-
-- Node.js `>= 22`
-- 已安装并登录至少一个运行时：
-  - Claude Code：`claude`
-  - Codex：`codex`
-  - Antigravity CLI：`agy`
-- 如果使用 WeChat：可访问对应 WeChat bridge。
-- 如果使用 Telegram：准备一个 Telegram Bot token。
-
-```bash
-git clone <repo-url> heart-anchor
-cd heart-anchor
-npm install
-cp .env.example .env   # 按注释填写，最小配置只需「快速开始」一节
-npm run check
+```mermaid
+flowchart LR
+    User["Telegram / WeChat / Web Console"] --> Core["Heart-Anchor Core"]
+    Events["Android / Watch / Calendar / Timeline"] --> Core
+    Core --> Runtime["Claude Code / Codex / Antigravity"]
+    Runtime --> Tools["Memory / Reminder / Search / Music / Google"]
+    Runtime --> Draft["Command or policy draft"]
+    Draft --> Phone["Android Edge Runtime"]
+    Phone --> Action["Alarm / Observe / Remind / Block"]
+    Phone --> Audit["Local audit and result sync"]
+    Audit --> Core
 ```
 
-## 快速启动
+## 为什么是 Heart-Anchor
 
-### Telegram + Claude Code
+普通聊天机器人通常在一次回复后结束。Heart-Anchor 更关注三个长期问题：
+
+- **上下文连续性**：绑定真实 workspace、runtime thread、长期记忆、timeline 和提醒，而不是每次从空白对话开始。
+- **现实执行力**：通过 Android Edge Runtime、系统命令和个人工具，把计划变成可以确认、执行、撤销和审计的动作。
+- **主动但可控**：设备事件和定时触发可以主动唤醒 Agent，但权限不会自动扩大，高风险行为仍由用户确认。
+
+## 核心能力
+
+| 方向 | 当前能力 | 状态 |
+| --- | --- | --- |
+| Agent Runtime | Claude Code、Codex 的线程、审批、停止、压缩与模型切换 | Stable |
+| 聊天入口 | Telegram 文本/文件/语音，WeChat 扫码、消息与文件桥接 | Stable / Beta |
+| Android Edge | 二维码配对、设备凭证、能力注册、离线专注策略、使用统计与 Power Mode | Beta |
+| 手机命令 | 闹钟、计时器、FCM 唤醒与轮询补拉 | Beta |
+| 主动上下文 | check-in、提醒、位置、Android 与手表事件、timeline | Beta |
+| 长期记忆 | SQLite 三态记忆、混合召回、时间衰减、候选确认与夜间整理 | Stable |
+| 个人工具 | Google Calendar/Gmail、网易云音乐、Web Search、TTS、文件与语音 | Beta |
+| Web Console | 运行状态、会话、消息队列、记忆、集成授权、日志和设置 | Beta |
+| Antigravity | CLI runtime 适配 | Experimental |
+
+> `Stable` 表示核心链路已有持续回归测试；`Beta` 表示可用但仍依赖平台权限、第三方服务或设备兼容性；`Experimental` 表示接口可能调整。
+
+<!-- README_MEDIA: 在这里加入三张截图：Web Console、二维码配对、专注拦截 Overlay。建议放在 assets/readme/。 -->
+
+## Android Edge Runtime
+
+`Heart-Anchor Mobile` 是独立 Android 执行节点，不与现有 Watch Bridge 共用包名或状态。
+
+- Web Console 生成十分钟有效的一次性二维码。
+- 每台设备获得独立、可撤销的随机凭证；服务端只保存哈希。
+- 手机上报实际可用能力与权限状态，Agent 不假设权限已经存在。
+- 新策略或策略 revision 必须在手机确认后才能生效。
+- `observe`、`remind`、`block` 三种模式覆盖统计、提醒和硬限制。
+- Accessibility Power Mode 只消费前台包名和窗口变化，不读取或上传界面正文。
+- 硬限制可经系统身份验证临时解锁五分钟，并写入审计记录。
+- 本地 Room、WorkManager 和重启恢复保证断网期间规则继续执行。
+
+手机端位于 [`clients/heart-anchor-mobile`](./clients/heart-anchor-mobile)，完整配置与安全说明见 [Android Edge Runtime v2](./docs/android-edge-runtime-v2.md)。
+
+Android 构建：
+
+```bash
+cd clients/heart-anchor-mobile
+./gradlew :app:testDebugUnitTest :app:assembleDebug
+```
+
+## 五分钟启动
+
+### 1. 准备环境
+
+- Node.js `>= 22`
+- 至少安装并登录一个 runtime CLI：`claude`、`codex` 或 `agy`
+- Telegram Bot token，或可用的 WeChat bridge
+
+### 2. 安装
+
+```bash
+git clone https://github.com/erisonw/Heart-Anchor.git
+cd Heart-Anchor
+npm ci
+cp .env.example .env
+```
+
+### 3. 配置推荐入口：Telegram + Claude Code
+
+在 `.env` 中至少填写：
 
 ```dotenv
 HEART_ANCHOR_CHANNEL=telegram
 HEART_ANCHOR_TELEGRAM_BOT_TOKEN=<your_telegram_bot_token>
 HEART_ANCHOR_TELEGRAM_ALLOWED_CHAT_IDS=<your_chat_id>
-HEART_ANCHOR_TELEGRAM_TRANSPORT=curl
 
 HEART_ANCHOR_RUNTIME=claudecode
 HEART_ANCHOR_CLAUDE_COMMAND=claude
-HEART_ANCHOR_WORKSPACE_ROOT=/absolute/path/to/heart-anchor
+HEART_ANCHOR_WORKSPACE_ROOT=/absolute/path/to/your/workspace
 ```
 
-启动：
+### 4. 检查并启动
 
 ```bash
+npm run doctor
+npm run check
 npm run start
 ```
 
-在 Telegram 给 bot 发消息即可。首次测试建议发：
+在 Telegram 给 Bot 发送消息即可。首次可以测试：
 
 ```text
 只回复一次：文本正常
 ```
 
-### WeChat + Claude Code
+<details>
+<summary><strong>使用 WeChat + Claude Code</strong></summary>
 
 ```dotenv
 HEART_ANCHOR_CHANNEL=weixin
 HEART_ANCHOR_RUNTIME=claudecode
 HEART_ANCHOR_CLAUDE_COMMAND=claude
 HEART_ANCHOR_ALLOWED_USER_IDS=<your_wechat_user_id>
-HEART_ANCHOR_WORKSPACE_ROOT=/absolute/path/to/heart-anchor
+HEART_ANCHOR_WORKSPACE_ROOT=/absolute/path/to/your/workspace
 ```
-
-登录：
 
 ```bash
 npm run login
@@ -107,7 +153,12 @@ npm run accounts
 npm run start
 ```
 
-### Shared 模式
+</details>
+
+<details>
+<summary><strong>使用 Shared 模式</strong></summary>
+
+Shared 模式让聊天入口和本机 runtime 共享同一个工作区线程，适合在手机、桌面终端和 Codex 之间连续协作。
 
 ```bash
 npm run shared:start
@@ -115,325 +166,141 @@ npm run shared:open
 npm run shared:status
 ```
 
-Shared 模式用于让聊天入口和本机 runtime 共享同一个工作区线程，适合本机开发、手机聊天和桌面终端协同。
+</details>
 
-## 常用命令
+完整环境变量及注释以 [`.env.example`](./.env.example) 为准。不要把真实 `.env`、Cookie、Bot token、API key 或聊天状态提交到仓库。
+
+## 日常控制
+
+### 本机命令
 
 ```bash
-npm run start          # 启动 bridge（含内嵌 Web 控制台）
+npm run start          # 启动 bridge 与内嵌 Web Console
 npm run start:checkin  # 启动并开启主动 check-in
+npm run doctor         # 检查运行环境
 npm run login          # WeChat 扫码登录
 npm run accounts       # 查看已登录账号
-npm run doctor         # 输出运行环境诊断
-npm run web:console    # 独立救援模式控制台（主进程不在时用，只读）
-npm run shared:start   # Shared 模式
-npm run check          # 全量语法检查
-npm test               # 全量测试
+npm run web:console    # 主进程不可用时启动只读救援控制台
+npm run shared:status  # 查看 Shared 模式状态
 ```
 
-聊天侧常用命令：
+### 聊天命令
 
-- `/new`：新建会话线程。
-- `/status`：查看当前 runtime、线程、上下文和工作区状态。
-- `/compact`：请求运行时压缩上下文。
-- `/stop`：停止当前运行中的 turn。
-- `/switch <threadId>`：切换到指定线程。
-- `/checkin <min>-<max>`：设置主动 check-in 随机区间，单位分钟。
-- `/chunk <number>`：调整短回复合并阈值。
-- `/yes`、`/always`、`/no`：处理审批请求。
-- `/model`、`/model <id>`：查看或切换模型。
+| 命令 | 作用 |
+| --- | --- |
+| `/new` | 新建 runtime thread |
+| `/status` | 查看 runtime、线程、上下文和工作区状态 |
+| `/reread` | 重新读取当前会话状态 |
+| `/compact` | 请求压缩当前上下文 |
+| `/stop` | 停止当前 turn |
+| `/switch <threadId>` | 切换线程 |
+| `/model [id]` | 查看或切换模型 |
+| `/yes` / `/always` / `/no` | 处理运行时审批 |
+| `/checkin <min>-<max>` | 设置主动 check-in 随机区间 |
 
-## 关键配置
+更多命令与内部 action 见 [命令设计](./docs/commands.md)。
 
-基础：
+## 安全与控制权
 
-```dotenv
-HEART_ANCHOR_STATE_DIR=~/.heart-anchor
-HEART_ANCHOR_WORKSPACE_ID=default
-HEART_ANCHOR_WORKSPACE_ROOT=/absolute/path/to/project
-HEART_ANCHOR_USER_NAME=User
-HEART_ANCHOR_USER_GENDER=neutral
-HEART_ANCHOR_CHANNEL=telegram
-HEART_ANCHOR_RUNTIME=claudecode
-```
+Heart-Anchor 会接触真实聊天、设备和工作区，因此默认把控制权放在用户一侧：
 
-Telegram：
+- FCM 只发送“有任务可拉取”的唤醒信号，不携带命令正文。
+- Android 设备使用独立凭证，不能读取或确认其他设备的命令。
+- 新专注策略和策略变更只能生成草案，手机确认后才会激活。
+- 手机可暂停云端命令；已确认的本地规则可以单独停用或删除。
+- 命令包含 ID、过期时间、状态机和幂等结果回传。
+- Web Console 默认只监听 `127.0.0.1`；监听公网地址前必须配置访问 token。
+- 前期不包含任意 Shell、Device Owner、支付、短信、联系人或广泛 UI 自动化。
 
-```dotenv
-HEART_ANCHOR_TELEGRAM_BOT_TOKEN=
-HEART_ANCHOR_TELEGRAM_ALLOWED_CHAT_IDS=
-HEART_ANCHOR_TELEGRAM_API_BASE_URL=https://api.telegram.org
-HEART_ANCHOR_TELEGRAM_POLL_TIMEOUT_MS=900
-HEART_ANCHOR_TELEGRAM_TRANSPORT=curl
-```
+公开部署前请再次检查：
 
-WeChat：
+- `HEART_ANCHOR_STATE_DIR` 位于持久化目录。
+- `.env` 只有服务用户可读。
+- Android webhook、位置服务和 Web Console 均配置独立 token。
+- Firebase、Google、TTS、搜索与音乐凭证不进入 Git 历史。
 
-```dotenv
-HEART_ANCHOR_ALLOWED_USER_IDS=
-HEART_ANCHOR_ACCOUNT_ID=
-HEART_ANCHOR_WEIXIN_BASE_URL=https://ilinkai.weixin.qq.com
-HEART_ANCHOR_WEIXIN_CDN_BASE_URL=https://novac2c.cdn.weixin.qq.com/c2c
-HEART_ANCHOR_WEIXIN_QR_BOT_TYPE=3
-HEART_ANCHOR_WEIXIN_MIN_CHUNK_CHARS=20
-```
+## 工作原理
 
-Claude Code：
-
-```dotenv
-HEART_ANCHOR_CLAUDE_COMMAND=claude
-HEART_ANCHOR_CLAUDE_MODEL=
-HEART_ANCHOR_CLAUDE_MODEL_PRESETS=
-HEART_ANCHOR_CLAUDE_CONTEXT_WINDOW=
-CLAUDE_CODE_MAX_OUTPUT_TOKENS=
-HEART_ANCHOR_CLAUDE_PERMISSION_MODE=default
-HEART_ANCHOR_CLAUDE_DISABLE_VERBOSE=false
-HEART_ANCHOR_CLAUDE_EXTRA_ARGS=
-```
-
-Codex：
-
-```dotenv
-HEART_ANCHOR_CODEX_ENDPOINT=
-HEART_ANCHOR_CODEX_COMMAND=
-HEART_ANCHOR_CODEX_MODEL=
-HEART_ANCHOR_CODEX_MODEL_PROVIDER=
-HEART_ANCHOR_CODEX_MODEL_PRESETS=
-HEART_ANCHOR_CODEX_NATIVE_IMAGE_INPUT=
-```
-
-Antigravity：
-
-```dotenv
-HEART_ANCHOR_ANTIGRAVITY_COMMAND=agy
-HEART_ANCHOR_ANTIGRAVITY_MODEL=
-HEART_ANCHOR_ANTIGRAVITY_PRINT_TIMEOUT=5m0s
-HEART_ANCHOR_ANTIGRAVITY_CONTINUE=true
-HEART_ANCHOR_ANTIGRAVITY_EXTRA_ARGS=
-```
-
-主动消息与 Android：
-
-```dotenv
-HEART_ANCHOR_ENABLE_CHECKIN=false
-HEART_ANCHOR_CHECKIN_MIN_INTERVAL_MS=
-HEART_ANCHOR_CHECKIN_MAX_INTERVAL_MS=
-
-HEART_ANCHOR_ENABLE_ANDROID_WEBHOOK=false
-HEART_ANCHOR_ANDROID_WEBHOOK_HOST=0.0.0.0
-HEART_ANCHOR_ANDROID_WEBHOOK_PORT=4319
-HEART_ANCHOR_ANDROID_WEBHOOK_TOKEN=
-HEART_ANCHOR_ANDROID_COMMANDS_ENABLED=true
-HEART_ANCHOR_ANDROID_DEFAULT_DEVICE_ID=phone-main
-HEART_ANCHOR_FIREBASE_SERVICE_ACCOUNT_FILE=
-HEART_ANCHOR_FIREBASE_MESSAGING_TIMEOUT_MS=10000
-```
-
-Web 控制台：
-
-```dotenv
-HEART_ANCHOR_WEB_CONSOLE=true
-HEART_ANCHOR_WEB_CONSOLE_HOST=127.0.0.1
-HEART_ANCHOR_WEB_CONSOLE_PORT=3210
-HEART_ANCHOR_WEB_CONSOLE_TOKEN=
-```
-
-Google 日历 / Gmail（OAuth client 复用同一组即可）：
-
-```dotenv
-HEART_ANCHOR_GOOGLE_CALENDAR_CLIENT_ID=
-HEART_ANCHOR_GOOGLE_CALENDAR_CLIENT_SECRET=
-HEART_ANCHOR_GOOGLE_CALENDAR_REDIRECT_URI=
-HEART_ANCHOR_GOOGLE_GMAIL_CLIENT_ID=
-HEART_ANCHOR_GOOGLE_GMAIL_CLIENT_SECRET=
-```
-
-位置与 whereabouts：
-
-```dotenv
-HEART_ANCHOR_ENABLE_LOCATION_SERVER=false
-HEART_ANCHOR_LOCATION_HOST=0.0.0.0
-HEART_ANCHOR_LOCATION_PORT=4318
-HEART_ANCHOR_LOCATION_TOKEN=
-HEART_ANCHOR_LOCATION_HOME_CENTER=
-HEART_ANCHOR_LOCATION_WORK_CENTER=
-HEART_ANCHOR_LOCATION_KNOWN_PLACES=
-HEART_ANCHOR_LOCATION_PLACE_RADIUS_METERS=150
-```
-
-外部能力：
-
-```dotenv
-HEART_ANCHOR_VISION_MODE=auto
-HEART_ANCHOR_VISION_PROVIDER=openai-compatible
-HEART_ANCHOR_VISION_API_BASE_URL=
-HEART_ANCHOR_VISION_API_KEY=
-HEART_ANCHOR_VISION_MODEL=
-
-HEART_ANCHOR_WEB_SEARCH_PROVIDER=
-HEART_ANCHOR_BRAVE_SEARCH_API_KEY=
-HEART_ANCHOR_TAVILY_API_KEY=
-HEART_ANCHOR_BOCHA_API_KEY=
-
-HEART_ANCHOR_NETEASE_COOKIE=
-HEART_ANCHOR_NETEASE_REAL_IP=
-HEART_ANCHOR_NETEASE_PROXY=
-
-HEART_ANCHOR_ELEVENLABS_BASE_URL=
-HEART_ANCHOR_ELEVENLABS_API_KEY=
-HEART_ANCHOR_ELEVENLABS_VOICE_ID=
-HEART_ANCHOR_ELEVENLABS_MODEL_ID=
-HEART_ANCHOR_ELEVENLABS_SPEED=
-```
-
-不要把真实 `.env`、`.cyberboss-state/`、cookie、bot token、API key 或聊天状态提交到仓库。
-
-## Android / Phone Bridge / MacroDroid
-
-Android 侧推荐先用 MacroDroid 做系统事件采集，再通过 HTTP webhook 发给 Heart-Anchor。
-
-需要让云端确认后远程设置手机闹钟/计时器时，使用 Android companion app 的 Phone Bridge v1。服务端暴露 `heart_anchor_android_alarm_set`、`heart_anchor_android_timer_set`、`heart_anchor_android_command_status`，设置类工具必须传 `confirmed: true`。
-
-Galaxy Watch7 / S23 Ultra v1 见 [docs/galaxy-watch7-v1-setup.md](docs/galaxy-watch7-v1-setup.md)，当前推荐先接心率告警和睡眠摘要。
-
-参考：
-
-- [Android Phone Bridge V1](./docs/android-phone-bridge-v1.md)
-- [Android MacroDroid Setup Guide](./docs/android-macrodroid-setup-guide.md)
-- [Android MacroDroid Webhook Templates](./docs/android-macrodroid-webhook-templates.md)
-
-典型链路：
+主要模块：
 
 ```text
-Cloud MCP tool
-  -> android-commands.json
-  -> FCM wake-up + phone foreground polling
-  -> Android AlarmClock intent
-
-Android / MacroDroid
-  -> Heart-Anchor Android webhook
-  -> android-events.jsonl
-  -> timeline / system trigger
-  -> runtime decides whether to reply
+src/core/                 应用编排、配置、队列、turn gate 与主动触发
+src/adapters/channel/     Telegram / WeChat 入口
+src/adapters/runtime/     Claude Code / Codex / Antigravity runtime
+src/services/             Android、记忆、提醒、Google、音乐、搜索、TTS 等服务
+src/tools/                heart_anchor_tools MCP 工具注册
+src/web-console/          内嵌控制台 API 与前端
+clients/                  Android 手机和手表配套应用
+test/                     Node.js 回归测试
 ```
 
-## Netease Music MCP
+模型通过项目原生 MCP 工具访问 timeline、diary、reminder、memory、文件、语音、搜索、Google 和 Android 能力。具体协议实现留在服务层，channel 与 runtime 只负责各自边界。
 
-网易云音乐能力并入现有 `heart_anchor_tools`，不是单独起一个 MCP server。第一版保留约 30 个高频工具：
+## Web Console
 
-- 登录状态与 QR 登录。
-- 搜索、热搜、榜单。
-- 歌曲详情、播放 URL、歌词、评论。
-- 用户歌单、创建歌单、添加/删除歌曲、收藏歌单。
-- 日推、私人 FM、喜欢列表、最近播放、听歌打卡。
+Web Console 默认随主进程启动在 `127.0.0.1:3210`，提供：
 
-如果 QR 登录被风控，可以手动设置 `HEART_ANCHOR_NETEASE_COOKIE`。cookie 不应进入 Git。
+- runtime、线程、上下文和队列状态
+- `/new`、`/reread`、`/compact` 等会话操作
+- 长期记忆搜索、编辑、归档和候选确认
+- Android 配对、设备能力、策略和活动记录
+- Google OAuth、网易云登录及其他集成状态
+- 实时日志与分级配置
 
-## Web Search
-
-支持 Brave Search、Tavily 与 Bocha 三种 provider。工具返回紧凑结果，避免把整页搜索结果直接塞进上下文。
-
-```dotenv
-HEART_ANCHOR_WEB_SEARCH_PROVIDER=tavily
-HEART_ANCHOR_TAVILY_API_KEY=<your_key>
-```
-
-或：
-
-```dotenv
-HEART_ANCHOR_WEB_SEARCH_PROVIDER=brave
-HEART_ANCHOR_BRAVE_SEARCH_API_KEY=<your_key>
-```
-
-国内中文新词、热梗和公众号/百科类结果优先试 Bocha：
-
-```dotenv
-HEART_ANCHOR_WEB_SEARCH_PROVIDER=bocha
-HEART_ANCHOR_BOCHA_API_KEY=<your_key>
-```
-
-## 语音与音频
-
-- `voice-transcode-service` 负责 PCM / Silk / Telegram Ogg Opus 等转码。
-- `tts-service` 根据 `HEART_ANCHOR_TTS_PROVIDER` 选择 TTS provider。
-- `elevenlabs-tts-service` 负责 ElevenLabs / 兼容中转。
-- `aliyun-bailian-tts-service` 负责阿里云百炼 CosyVoice 非流式语音合成。
-- Telegram 端短 TTS 默认走原生语音气泡；音乐或长音频默认走播放器音频。
-- WeChat 原生语音气泡仍受 bridge 能力限制，当前更适合作为实验能力。
-
-ElevenLabs 示例：
-
-```dotenv
-HEART_ANCHOR_TTS_PROVIDER=elevenlabs
-HEART_ANCHOR_ELEVENLABS_API_KEY=<your_key>
-HEART_ANCHOR_ELEVENLABS_VOICE_ID=<voice_id>
-HEART_ANCHOR_ELEVENLABS_MODEL_ID=eleven_turbo_v2_5
-HEART_ANCHOR_ELEVENLABS_OUTPUT_FORMAT=mp3_44100_128
-```
-
-阿里云百炼 CosyVoice 示例：
-
-```dotenv
-HEART_ANCHOR_TTS_PROVIDER=aliyun
-HEART_ANCHOR_ALIYUN_DASHSCOPE_API_KEY=<your_dashscope_key>
-HEART_ANCHOR_ALIYUN_WORKSPACE_ID=<optional_workspace_id>
-HEART_ANCHOR_ALIYUN_TTS_MODEL=cosyvoice-v3.5-plus
-HEART_ANCHOR_ALIYUN_TTS_VOICE=<your_custom_voice_id>
-HEART_ANCHOR_ALIYUN_TTS_FORMAT=mp3
-HEART_ANCHOR_ALIYUN_TTS_SAMPLE_RATE=24000
-HEART_ANCHOR_ALIYUN_TTS_VOLUME=50
-HEART_ANCHOR_ALIYUN_TTS_RATE=1
-HEART_ANCHOR_ALIYUN_TTS_PITCH=1
-HEART_ANCHOR_ALIYUN_TTS_INSTRUCTION=温柔自然，像日常聊天。
-```
-
-## Web 控制台
-
-控制台随 `npm run start` 内嵌在主进程里启动（默认监听 `127.0.0.1:3210`，`HEART_ANCHOR_WEB_CONSOLE=false` 可关闭），直接读写运行中的会话、队列和记忆，与聊天命令走同一套代码路径。面板包括：
-
-- **总览**：渠道 / 运行时 / 当前会话状态、上下文用量、check-in 计划、队列水位。
-- **会话**：网页按钮执行 `/new`、`/compact`，查看等待审批和最近错误。
-- **消息队列**：查看待投递系统消息与提醒，手动注入系统消息调试主动触达链路。
-- **记忆**：搜索 / 新增 / 编辑 / 归档记忆，人工确认 Agent 提交的候选记忆。
-- **集成**：Google 日历 / Gmail 授权状态与页内 OAuth 流程、网易云扫码登录、第三方 MCP 注入状态。
-- **日志**：SSE 实时日志流。
-- **设置**：常用配置在明面，渠道 / 视觉 / 语音 / 位置等进阶参数折叠进「高级设置」；密钥只写不读，改动重启后生效。
-
-访问安全：未设置 token 时只放行本机回环，云端建议通过 SSH 隧道访问（`ssh -L 3210:127.0.0.1:3210 <server>`）；如需监听非本机地址，必须先设置 `HEART_ANCHOR_WEB_CONSOLE_TOKEN`。
-
-主进程不在时可用 `npm run web:console` 起独立救援模式：只读状态 + 配置编辑，不提供会话 / 队列 / 记忆操作。
-
-## 验证
+云端推荐通过 SSH 隧道访问：
 
 ```bash
-npm run check   # 全部 JS 语法检查
-npm test        # node:test 全量测试（300+ 用例）
+ssh -L 3210:127.0.0.1:3210 <server>
 ```
 
-GitHub Actions 会在 push / PR 时自动跑同样两步。部分 sticker 测试依赖 macOS `sips`，在 Linux 上自动跳过。部分测试会启动本地 HTTP server，运行环境需允许监听 `127.0.0.1`。
+## 项目状态与路线
 
-## 部署备注
+当前重点是把 Android 手机建设成可靠的现实执行节点：
 
-云端常驻推荐使用 systemd。最小思路：
+1. **已落地**：安全配对、设备身份、能力注册、命令同步、结果回传和本地审计。
+2. **持续完善**：应用使用统计、提醒、Accessibility Power Mode、离线策略与设备兼容性。
+3. **下一阶段**：扩展低风险生活动作，统一手机、手表、日历、通知和 timeline 上下文。
+4. **长期方向**：有限委托、多设备插件协议、权限预算、异常熔断和长期自治。
 
-```text
+高风险能力不会因为路线扩展而默认开放。
+
+## 文档导航
+
+| 文档 | 内容 |
+| --- | --- |
+| [Android Edge Runtime v2](./docs/android-edge-runtime-v2.md) | 手机配对、权限、专注策略、安全与离线行为 |
+| [Android Phone Bridge v1](./docs/android-phone-bridge-v1.md) | 闹钟与计时器命令链路 |
+| [MacroDroid 接入指南](./docs/android-macrodroid-setup-guide.md) | Android 系统事件采集 |
+| [Galaxy Watch7 v1](./docs/galaxy-watch7-v1-setup.md) | 心率、睡眠与手表桥接 |
+| [命令设计](./docs/commands.md) | 聊天命令、内部 action 与 MCP 工具 |
+| [系统架构](./docs/architecture.md) | Channel、Runtime、Core 与 capability 边界 |
+| [Termius + tmux](./docs/termius-tmux-shared-terminal.zh-CN.md) | 手机终端共享工作流 |
+
+## 开发与验证
+
+```bash
+npm run check
+npm test
+```
+
+CI 会在每次 push 和 pull request 时执行相同检查。测试覆盖 runtime、channel、Android v1/v2、长期记忆、Web Console、个人工具和主动消息链路。
+
+云端常驻推荐使用 systemd：
+
+```ini
+[Service]
 WorkingDirectory=/opt/heart-anchor
 EnvironmentFile=/opt/heart-anchor/.env
 ExecStart=/usr/bin/npm run start
 Restart=always
 ```
 
-部署时尤其注意：
+## 项目来源
 
-- `HEART_ANCHOR_STATE_DIR` 放在持久化目录。
-- `.env` 权限限制为只有服务用户可读。
-- Telegram token、Netease cookie、TTS key、search key 不要写进 README 或提交历史。
-- Web 控制台默认只监听本机；如要监听非本机地址必须先配置访问 token。Android webhook 不要裸奔公网。
+Heart-Anchor 基于 [WenXiaoWendy/cyberboss](https://github.com/WenXiaoWendy/cyberboss) 持续演进。仓库保留 `CYBERBOSS_*` 环境变量前缀和 `~/.cyberboss` 状态目录兼容性，已有部署无需立即迁移。
 
-## 与上游的关系
-
-本项目保留上游作为 `upstream`，个人二开版本在 `origin` 维护。上游提供了 Heart-Anchor 的早期设计和基础框架；本仓库在此基础上增加了 Telegram、Antigravity MVP、Android webhook、手表桥接、长期记忆系统、Google 日历/Gmail、Netease music、TTS、web search、内嵌 Web 控制台、CI 与大量测试和稳定性修复。
+感谢原项目提供的早期设计与基础框架。
 
 ## License
 
-AGPL-3.0-only。详见 [LICENSE](./LICENSE)。
+[AGPL-3.0-only](./LICENSE)

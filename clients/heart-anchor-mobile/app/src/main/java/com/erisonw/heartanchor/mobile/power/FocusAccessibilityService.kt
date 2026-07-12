@@ -45,7 +45,6 @@ class FocusAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString().orEmpty()
         if (packageName.isBlank() || packageName == this.packageName || packageName.startsWith("com.android.systemui")) {
-            hideOverlay()
             return
         }
         scope.launch {
@@ -53,11 +52,10 @@ class FocusAccessibilityService : AccessibilityService() {
             withContext(Dispatchers.Main) {
                 when (evaluation?.decision) {
                     FocusDecision.REMIND -> {
-                        hideOverlay()
-                        showReminder(evaluation)
+                        if (overlay == null) showReminder(evaluation)
                     }
                     FocusDecision.BLOCK -> block(evaluation)
-                    else -> hideOverlay()
+                    else -> Unit
                 }
             }
         }
@@ -127,6 +125,7 @@ class FocusAccessibilityService : AccessibilityService() {
             addView(Button(context).apply {
                 text = "验证身份，临时解锁 ${evaluation.policy.temporaryUnlockMinutes} 分钟"
                 setOnClickListener {
+                    hideOverlay()
                     startActivity(Intent(this@FocusAccessibilityService, UnlockActivity::class.java).apply {
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         putExtra(UnlockActivity.EXTRA_POLICY_ID, evaluation.policy.policyId)

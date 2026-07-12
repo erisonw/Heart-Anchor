@@ -5,6 +5,10 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class UnlockActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,8 +25,10 @@ class UnlockActivity : FragmentActivity() {
             ContextCompat.getMainExecutor(this),
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    MobileRepository.get(this@UnlockActivity).grantTemporaryUnlock(policyId)
-                    finish()
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        MobileRepository.get(this@UnlockActivity).grantTemporaryUnlock(policyId)
+                        withContext(Dispatchers.Main) { finish() }
+                    }
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {

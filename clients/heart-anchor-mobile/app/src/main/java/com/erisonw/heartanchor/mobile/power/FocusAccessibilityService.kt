@@ -21,13 +21,15 @@ import com.erisonw.heartanchor.mobile.focus.PolicyEvaluation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class FocusAccessibilityService : AccessibilityService() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val serviceJob = SupervisorJob()
+    private val scope = CoroutineScope(serviceJob + Dispatchers.IO)
     private lateinit var repository: MobileRepository
     private lateinit var windowManager: WindowManager
     private var overlay: View? = null
@@ -37,7 +39,7 @@ class FocusAccessibilityService : AccessibilityService() {
         repository = MobileRepository.get(this)
         windowManager = getSystemService(WindowManager::class.java)
         createNotificationChannel()
-        repository.recordAudit("power_mode_enabled", "", "Power Mode 已连接")
+        recordAudit("power_mode_enabled", "", "Power Mode 已连接")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -67,7 +69,14 @@ class FocusAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         hideOverlay()
-        repository.recordAudit("power_mode_disabled", "", "Power Mode 已断开")
+        if (::repository.isInitialized) {
+            scope.launch {
+                repository.recordAudit("power_mode_disabled", "", "Power Mode 已断开")
+                serviceJob.cancel()
+            }
+        } else {
+            serviceJob.cancel()
+        }
         super.onDestroy()
     }
 
@@ -88,7 +97,7 @@ class FocusAccessibilityService : AccessibilityService() {
             .setAutoCancel(true)
             .build()
         manager.notify(evaluation.policy.policyId.hashCode(), notification)
-        repository.recordAudit("focus_reminder", evaluation.policy.policyId, "已提醒：使用 ${evaluation.usedMinutes} 分钟")
+        recordAudit("focus_reminder", evaluation.policy.policyId, "已提醒：使用 ${evaluation.usedMinutes} 分钟")
     }
 
     private fun block(evaluation: PolicyEvaluation) {
@@ -141,7 +150,12 @@ class FocusAccessibilityService : AccessibilityService() {
         )
         windowManager.addView(layout, params)
         overlay = layout
-        repository.recordAudit("focus_block", evaluation.policy.policyId, "已拦截：使用 ${evaluation.usedMinutes} 分钟")
+        recordAudit("focus_block", evaluation.policy.policyId, "已拦截：使用 ${evaluation.usedMinutes} 分钟")
+    }
+
+    private fun recordAudit(type: String, policyId: String, summary: String) {
+        if (!::repository.isInitialized) return
+        scope.launch { repository.recordAudit(type, policyId, summary) }
     }
 
     private fun hideOverlay() {

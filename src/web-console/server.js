@@ -98,14 +98,14 @@ async function createWebConsoleServer({ app = null, config, host, port, token = 
 
 async function handleRequest(context, request, response) {
   const url = new URL(request.url, "http://localhost");
-  if (!isAuthorized(context, request, url)) {
-    sendJson(response, 401, { error: "unauthorized: token required" });
-    return;
-  }
-
   const staticEntry = request.method === "GET" ? STATIC_FILES[url.pathname] : null;
   if (staticEntry) {
     sendStaticFile(response, staticEntry);
+    return;
+  }
+
+  if (!isAuthorized(context, request, url)) {
+    sendJson(response, 401, { error: "unauthorized: token required" });
     return;
   }
 

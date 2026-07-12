@@ -312,11 +312,13 @@ test("embedded state exposes live thread status and context line", async () => {
   });
 });
 
-test("token auth guards api and static routes", async () => {
+test("token auth guards api while leaving the console shell loadable", async () => {
   const config = createConfig(path.join(TMP_ROOT, "state-auth"));
   await withServer({ config, token: "sekret" }, async (base) => {
     assert.equal((await fetch(`${base}/api/state`)).status, 401);
-    assert.equal((await fetch(`${base}/`)).status, 401);
+    assert.equal((await fetch(`${base}/`)).status, 200);
+    assert.equal((await fetch(`${base}/assets/app.js`)).status, 200);
+    assert.equal((await fetch(`${base}/assets/app.css`)).status, 200);
     const withHeader = await fetch(`${base}/api/state`, {
       headers: { Authorization: "Bearer sekret" },
     });

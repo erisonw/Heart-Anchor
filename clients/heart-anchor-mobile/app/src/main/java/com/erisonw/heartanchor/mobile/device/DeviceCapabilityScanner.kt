@@ -44,6 +44,23 @@ object DeviceCapabilityScanner {
     fun isAccessibilityEnabled(context: Context): Boolean {
         val expected = ComponentName(context, FocusAccessibilityService::class.java).flattenToString()
         val enabled = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
-        return enabled.split(':').any { it.equals(expected, ignoreCase = true) }
+        return containsEnabledComponent(enabled, expected)
+    }
+
+    internal fun containsEnabledComponent(enabledServices: String, expectedComponent: String): Boolean {
+        val expected = normalizeComponent(expectedComponent) ?: return false
+        return enabledServices
+            .split(':')
+            .asSequence()
+            .mapNotNull(::normalizeComponent)
+            .any { it.first.equals(expected.first, ignoreCase = true) && it.second.equals(expected.second, ignoreCase = true) }
+    }
+
+    private fun normalizeComponent(value: String): Pair<String, String>? {
+        val packageName = value.substringBefore('/', missingDelimiterValue = "").trim()
+        val rawClassName = value.substringAfter('/', missingDelimiterValue = "").trim()
+        if (packageName.isBlank() || rawClassName.isBlank()) return null
+        val className = if (rawClassName.startsWith('.')) "$packageName$rawClassName" else rawClassName
+        return packageName to className
     }
 }

@@ -3,6 +3,7 @@ package com.erisonw.heartanchor.mobile.sync
 import android.content.Context
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
@@ -11,6 +12,7 @@ import java.util.concurrent.TimeUnit
 
 object SyncScheduler {
     private const val PERIODIC_NAME = "heart-anchor-device-sync"
+    private const val IMMEDIATE_NAME = "heart-anchor-device-sync-immediate"
 
     fun schedule(context: Context, immediate: Boolean = false) {
         val workManager = WorkManager.getInstance(context)
@@ -20,7 +22,11 @@ object SyncScheduler {
             .build()
         workManager.enqueueUniquePeriodicWork(PERIODIC_NAME, ExistingPeriodicWorkPolicy.UPDATE, periodic)
         if (immediate) {
-            workManager.enqueue(OneTimeWorkRequestBuilder<CommandSyncWorker>().setConstraints(constraints).build())
+            workManager.enqueueUniqueWork(
+                IMMEDIATE_NAME,
+                ExistingWorkPolicy.KEEP,
+                OneTimeWorkRequestBuilder<CommandSyncWorker>().setConstraints(constraints).build(),
+            )
         }
     }
 }

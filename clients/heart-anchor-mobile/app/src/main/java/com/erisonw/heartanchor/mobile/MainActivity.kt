@@ -2,9 +2,12 @@ package com.erisonw.heartanchor.mobile
 
 import android.Manifest
 import android.content.Intent
+import android.database.ContentObserver
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -70,7 +73,12 @@ import java.util.Date
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-        viewModel.refresh()
+        viewModel.refresh(syncCapabilitiesWhenChanged = true)
+    }
+    private val accessibilitySettingsObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) {
+            viewModel.refresh(syncCapabilitiesWhenChanged = true)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -99,7 +107,21 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        viewModel.refresh()
+        viewModel.refresh(syncCapabilitiesWhenChanged = true)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        contentResolver.registerContentObserver(
+            Settings.Secure.getUriFor(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES),
+            false,
+            accessibilitySettingsObserver,
+        )
+    }
+
+    override fun onStop() {
+        contentResolver.unregisterContentObserver(accessibilitySettingsObserver)
+        super.onStop()
     }
 
     private fun acceptPairingIntent(intent: Intent?) {

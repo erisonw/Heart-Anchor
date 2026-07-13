@@ -13,6 +13,7 @@ import com.erisonw.heartanchor.mobile.device.DeviceCapabilityScanner
 import com.erisonw.heartanchor.mobile.network.CapabilityDto
 import com.erisonw.heartanchor.mobile.network.PairingLink
 import com.erisonw.heartanchor.mobile.security.DeviceSession
+import com.erisonw.heartanchor.mobile.sync.SyncScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -31,6 +32,8 @@ data class MobileUiState(
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = MobileRepository.get(application)
+    @Volatile
+    private var lastScheduledCapabilitySnapshot: List<Triple<String, String, String>>? = null
     var uiState by mutableStateOf(MobileUiState())
         private set
 
@@ -79,8 +82,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun unpair() = mutate { repository.unpairLocally() }
 
-    fun refresh() {
-        viewModelScope.launch { refreshInternal() }
+    fun refresh(syncCapabilitiesWhenChanged: Boolean = false) {
+        viewModelScope.launch { refreshInternal(syncCapabilitiesWhenChanged) }
     }
 
     private fun mutate(block: () -> Unit) {
@@ -90,19 +93,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun refreshInternal() = withContext(Dispatchers.IO) {
+    private suspend fun refreshInternal(syncCapabilitiesWhenChanged: Boolean = false) = withContext(Dispatchers.IO) {
         repository.refreshUsage()
+        val capabilities = DeviceCapabilityScanner.scan(getApplication())
+        val nextCapabilitySnapshot = capabilitySnapshot(capabilities)
+        val capabilitiesChanged = lastScheduledCapabilitySnapshot != nextCapabilitySnapshot
         val next = MobileUiState(
             session = repository.session(),
             policies = repository.listPolicies(),
             audits = repository.listAudit(),
             usage = repository.listUsageToday(),
-            capabilities = DeviceCapabilityScanner.scan(getApplication()),
+            capabilities = capabilities,
             commandsPaused = repository.cloudCommandsPaused(),
             pairingText = uiState.pairingText,
             status = uiState.status,
             busy = uiState.busy,
         )
+        if (syncCapabilitiesWhenChanged && capabilitiesChanged && next.session != null) {
+            lastScheduledCapabilitySnapshot = nextCapabilitySnapshot
+            SyncScheduler.schedule(getApplication(), immediate = true)
+        }
         withContext(Dispatchers.Main) { uiState = next }
     }
+
+    private fun capabilitySnapshot(capabilities: List<CapabilityDto>) =
+        capabilities.map { Triple(it.key, it.status, it.detail) }
 }

@@ -34,12 +34,13 @@ import java.util.concurrent.TimeUnit
 class MobileRepository private constructor(private val context: Context) {
     private val dao = HeartAnchorDatabase.get(context).dao()
     private val secureStore = SecureCredentialStore(context)
+    private val runtimeStatus = context.getSharedPreferences(RUNTIME_STATUS_PREFS, Context.MODE_PRIVATE)
     private val api = HeartAnchorApiClient()
     private val gson = Gson()
     private val usageCollector = UsageCollector(context, dao)
     private val policyEngine = FocusPolicyEngine(gson)
     private val actionExecutor = PhoneActionExecutor(context)
-    @Volatile private var fcmTokenReady = false
+    @Volatile private var fcmTokenReady = runtimeStatus.getBoolean(KEY_FCM_TOKEN_READY, false)
 
     suspend fun pair(link: PairingLink): DeviceSession = withContext(Dispatchers.IO) {
         val claimed = api.claimPairing(
@@ -270,13 +271,20 @@ class MobileRepository private constructor(private val context: Context) {
 
     private fun fcmToken(): String = runCatching {
         Tasks.await(FirebaseMessaging.getInstance().token, 5, TimeUnit.SECONDS).orEmpty()
-    }.getOrDefault("").also { fcmTokenReady = it.isNotBlank() }
+    }.getOrDefault("").also { token ->
+        if (token.isNotBlank()) {
+            fcmTokenReady = true
+            runtimeStatus.edit().putBoolean(KEY_FCM_TOKEN_READY, true).apply()
+        }
+    }
 
     private fun parseTime(value: String): Long = runCatching { Instant.parse(value).toEpochMilli() }.getOrDefault(System.currentTimeMillis())
 
     companion object {
         private const val AUDIT_UPLOAD_BATCH_SIZE = 50
         private const val MAX_AUDIT_UPLOADS_PER_SYNC = 500
+        private const val RUNTIME_STATUS_PREFS = "heart_anchor_runtime_status"
+        private const val KEY_FCM_TOKEN_READY = "fcm_token_ready"
         @Volatile private var INSTANCE: MobileRepository? = null
         fun get(context: Context): MobileRepository = INSTANCE ?: synchronized(this) {
             INSTANCE ?: MobileRepository(context.applicationContext).also { INSTANCE = it }

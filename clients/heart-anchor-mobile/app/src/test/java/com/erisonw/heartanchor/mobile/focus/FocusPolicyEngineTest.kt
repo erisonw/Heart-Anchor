@@ -87,6 +87,39 @@ class FocusPolicyEngineTest {
         assertEquals(FocusDecision.BLOCK, result?.decision)
     }
 
+    @Test
+    fun overnightScheduleDoesNotUseTheEarlyMorningCalendarDay() {
+        val policy = policy(mode = "block", limit = 10).apply {
+            daysOfWeekJson = "[2]"
+            startTime = "22:00"
+            endTime = "06:00"
+        }
+        val tuesdayEarlyMorning = ZonedDateTime.of(2026, 7, 14, 1, 0, 0, 0, zone).toInstant().toEpochMilli()
+
+        assertNull(
+            engine.evaluate(
+                listOf(policy),
+                "com.ss.android.ugc.aweme",
+                mapOf("com.ss.android.ugc.aweme" to 10 * 60_000L),
+                tuesdayEarlyMorning,
+            ),
+        )
+    }
+
+    @Test
+    fun nextResetUsesMidnightInThePolicyTimeZone() {
+        val now = ZonedDateTime.of(2026, 7, 13, 23, 30, 0, 0, zone).toInstant().toEpochMilli()
+        val expected = ZonedDateTime.of(2026, 7, 14, 0, 0, 0, 0, zone).toInstant().toEpochMilli()
+        val result = engine.evaluate(
+            listOf(policy(mode = "observe", limit = 20)),
+            "com.ss.android.ugc.aweme",
+            emptyMap(),
+            now,
+        )
+
+        assertEquals(expected, result?.nextResetEpochMs)
+    }
+
     private fun policy(mode: String, limit: Int) = FocusPolicyEntity().apply {
         policyId = "policy-1"
         revision = 1

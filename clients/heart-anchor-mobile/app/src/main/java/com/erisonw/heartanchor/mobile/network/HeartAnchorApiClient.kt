@@ -11,6 +11,8 @@ import java.net.URI
 import java.net.URL
 import java.net.URLEncoder
 
+class HeartAnchorApiException(val statusCode: Int, message: String) : IOException(message)
+
 class HeartAnchorApiClient(private val gson: Gson = Gson()) {
     fun claimPairing(link: PairingLink, deviceName: String, fcmToken: String, capabilities: List<CapabilityDto>): ClaimResponse {
         validateServer(link.serverBaseUrl)
@@ -142,7 +144,7 @@ class HeartAnchorApiClient(private val gson: Gson = Gson()) {
                 ?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
             if (code !in 200..299) {
                 val message = runCatching { gson.fromJson(text, JsonObject::class.java).get("error")?.asString }.getOrNull()
-                throw IOException(message ?: "Heart-Anchor returned HTTP $code")
+                throw HeartAnchorApiException(code, message ?: "Heart-Anchor returned HTTP $code")
             }
             return gson.fromJson(text, responseType)
         } finally {

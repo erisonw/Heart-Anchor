@@ -214,6 +214,7 @@ private fun DeviceScreen(state: MobileUiState, viewModel: MainViewModel, modifie
                 badge = if (state.commandsPaused) "命令已暂停" else "已配对",
             )
         }
+        item { StatusCard("命令唤醒", state.fcmStatus, if (BuildConfig.FCM_CONFIGURED) "FCM" else "轮询兜底") }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 Button(onClick = viewModel::sync, enabled = !state.busy, modifier = Modifier.weight(1f)) { Text("立即同步") }

@@ -41,6 +41,12 @@ com.erisonw.heartanchor.mobile
 
 然后把 `google-services.json` 放到 `clients/heart-anchor-mobile/app/`。没有该文件仍可构建和手动同步，但没有 FCM 即时唤醒。
 
+服务端还需要设置 Firebase Admin 服务账号文件；两端缺少任意一项时，手机首页会明确显示轮询兜底状态：
+
+```dotenv
+HEART_ANCHOR_FIREBASE_SERVICE_ACCOUNT_FILE=/absolute/path/firebase-service-account.json
+```
+
 ## 3. 配对与权限
 
 1. 安装 debug APK。

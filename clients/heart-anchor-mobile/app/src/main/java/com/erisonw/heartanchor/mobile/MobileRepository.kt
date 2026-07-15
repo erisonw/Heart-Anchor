@@ -14,6 +14,7 @@ import com.erisonw.heartanchor.mobile.focus.UsageCollector
 import com.erisonw.heartanchor.mobile.network.CommandDto
 import com.erisonw.heartanchor.mobile.network.FocusPolicyDto
 import com.erisonw.heartanchor.mobile.network.HeartAnchorApiClient
+import com.erisonw.heartanchor.mobile.network.HeartAnchorApiException
 import com.erisonw.heartanchor.mobile.network.PairingLink
 import com.erisonw.heartanchor.mobile.security.DeviceSession
 import com.erisonw.heartanchor.mobile.security.SecureCredentialStore
@@ -38,6 +39,7 @@ class MobileRepository private constructor(private val context: Context) {
     private val usageCollector = UsageCollector(context, dao)
     private val policyEngine = FocusPolicyEngine(gson)
     private val actionExecutor = PhoneActionExecutor(context)
+    @Volatile private var fcmTokenReady = false
 
     suspend fun pair(link: PairingLink): DeviceSession = withContext(Dispatchers.IO) {
         val claimed = api.claimPairing(
@@ -92,6 +94,11 @@ class MobileRepository private constructor(private val context: Context) {
     fun listPendingPolicies(): List<FocusPolicyEntity> = dao.listPendingPolicies()
     fun listAudit(limit: Int = 50): List<AuditEventEntity> = dao.listAudit(limit)
     fun listUsageToday() = dao.listUsageForDate(LocalDate.now().toString())
+    fun fcmStatus(): String = when {
+        !BuildConfig.FCM_CONFIGURED -> "未配置 · 每 15 分钟联网轮询"
+        fcmTokenReady -> "FCM 即时唤醒已就绪"
+        else -> "已配置 · 等待 FCM 令牌"
+    }
 
     fun approvePolicy(policyId: String) {
         val policy = dao.findPendingPolicy(policyId) ?: return
@@ -223,36 +230,60 @@ class MobileRepository private constructor(private val context: Context) {
 
     private fun flushPendingResults(session: DeviceSession) {
         dao.listPendingResults().forEach { pending ->
-            api.reportResult(session, pending.commandId, pending.status, pending.resultJson, pending.error)
-            dao.deletePendingResult(pending.commandId)
+            try {
+                api.reportResult(session, pending.commandId, pending.status, pending.resultJson, pending.error)
+                dao.deletePendingResult(pending.commandId)
+            } catch (error: HeartAnchorApiException) {
+                if (!PendingResultRetryPolicy.shouldDiscard(error)) throw error
+                dao.deletePendingResult(pending.commandId)
+                recordAudit(
+                    "command_result_discarded",
+                    "",
+                    "云端命令已过期或不存在，已跳过旧结果",
+                    mapOf("commandId" to pending.commandId, "httpStatus" to error.statusCode),
+                )
+            }
         }
     }
 
     private fun flushAuditEvents(session: DeviceSession) {
-        dao.listUnsyncedAudit(50).forEach { event ->
-            api.uploadAuditEvent(
-                session = session,
-                eventId = event.eventId,
-                eventType = event.type,
-                occurredAt = Instant.ofEpochMilli(event.occurredAtEpochMs).toString(),
-                label = event.summary,
-                policyId = event.policyId,
-                detailJson = event.detailJson,
-            )
-            dao.markAuditSynced(event.eventId)
+        var remaining = MAX_AUDIT_UPLOADS_PER_SYNC
+        while (remaining > 0) {
+            val batch = dao.listUnsyncedAudit(minOf(AUDIT_UPLOAD_BATCH_SIZE, remaining))
+            if (batch.isEmpty()) return
+            batch.forEach { event ->
+                api.uploadAuditEvent(
+                    session = session,
+                    eventId = event.eventId,
+                    eventType = event.type,
+                    occurredAt = Instant.ofEpochMilli(event.occurredAtEpochMs).toString(),
+                    label = event.summary,
+                    policyId = event.policyId,
+                    detailJson = event.detailJson,
+                )
+                dao.markAuditSynced(event.eventId)
+                remaining -= 1
+            }
+            if (batch.size < AUDIT_UPLOAD_BATCH_SIZE) return
         }
     }
 
     private fun fcmToken(): String = runCatching {
         Tasks.await(FirebaseMessaging.getInstance().token, 5, TimeUnit.SECONDS).orEmpty()
-    }.getOrDefault("")
+    }.getOrDefault("").also { fcmTokenReady = it.isNotBlank() }
 
     private fun parseTime(value: String): Long = runCatching { Instant.parse(value).toEpochMilli() }.getOrDefault(System.currentTimeMillis())
 
     companion object {
+        private const val AUDIT_UPLOAD_BATCH_SIZE = 50
+        private const val MAX_AUDIT_UPLOADS_PER_SYNC = 500
         @Volatile private var INSTANCE: MobileRepository? = null
         fun get(context: Context): MobileRepository = INSTANCE ?: synchronized(this) {
             INSTANCE ?: MobileRepository(context.applicationContext).also { INSTANCE = it }
         }
     }
+}
+
+internal object PendingResultRetryPolicy {
+    fun shouldDiscard(error: HeartAnchorApiException): Boolean = error.statusCode == 404 || error.statusCode == 409
 }
